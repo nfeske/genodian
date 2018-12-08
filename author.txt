@@ -1,0 +1,6 @@
+Norman is co-founder of Genode Labs and coordinates the Genode project.
+He is focused on the framework architecture, tooling, and graphics.
+
+*GitHub* [https://github.com/nfeske - nfeske]
+
+*Company* [https://www.genode-labs.com - Genode Labs]
