@@ -1,0 +1,42 @@
+
+             A new place for sharing Genode-related stories
+
+Genodians.org presents ideas, announcements, experience stories, and tutorials
+around Genode, written by people like you and me. Genode users and developers
+are very welcome to join our tribe of authors!
+
+After more than a decade of development, Genode still remains a fairly obscure
+project to many casual observers. New information comes out in bursts, along
+with the quarterly Genode releases. In-between the releases, the project life
+at GitHub and Genode Labs is vivid but it remains largely out of view of the
+public eye. With genodians.org, we want to remove the mystery cloak from the
+project by sharing practical insights and experience stories in a casual way.
+
+The postings are maintained by each author individually. The website merely
+aggregates them at one easy-to-find place. The simplest way to become an
+author is as follows:
+
+# Create a new repository for your content at GitHub. Let's call it "genodian".
+
+# Add the following content to your genodian repository:
+
+  * An _author.txt_ file with information about you that will be displayed
+    along with your articles.
+  * A 128x128 PNG image called _author.png_ that depicts you or an avatar
+    of you.
+  * Your first posting in a file called _<YYYY-MM-DD>-<title>.txt_,
+    for example
+    ! 2019-01-01-new-year.txt
+
+  All text files are written in [https://github.com/nfeske/gosh - GOSH] style,
+  which is very similar to markdown. You may take
+  [https://github.com/nfeske/genodian - my repository] as reference.
+
+# Open a new issue at [https://github.com/genodelabs/genodians.org] proposing
+  the inclusion of your genodian repository.
+
+Please also consider the README file at
+[https://github.com/genodelabs/genodians.org] for more details, general
+rules, and an easy way to test-drive the appearance of your postings locally
+on your machine.
+
