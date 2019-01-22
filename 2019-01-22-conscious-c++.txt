@@ -1,0 +1,198 @@
+
+                       Genode's Conscious C++ dialect
+
+
+
+C++ is a power tool that scales from embedded systems to the most complex
+software stacks imaginable. When we started Genode in 2006, the feature set of
+the language was extremely persuasive. It strikes a great balance of giving
+the programmer full control whenever needed while also featuring means of
+expressing high-level software designs. This power is a two-edged sword
+though. In this series of postings, I'd like to share how we learned to handle
+it without regrets.
+
+
+Two edges of the sword
+----------------------
+
+On the one edge, the versatility of C++ is staggering. A programmer is free to
+express oneself via imperative programming, object-oriented programming,
+functional programming, meta programming, and the combinations of these
+paradigms! The industry-wide adoption is huge, thanks to the quality and
+diversity of tooling (e.g., diverse compiler vendors), the careful language
+standardization process, and the well-designed standard library.
+
+On the other edge, C++ is widely criticised for its enormous complexity and
+safety risks. It has become so complex that even father figures like Scott
+Meyers
+[http://scottmeyers.blogspot.com/2015/12/good-to-go.html - have thrown the towel].
+The language's design seems to follow a principle of maximum risk. No risk, no
+fun, right? So we can dance on the volcano to the tune of manual memory
+management, integer overflows, implicit type conversions, implicitly called
+constructors, out-of-bounds array accesses, and rhythms of undefined behavior.
+The absence of an universally established coding-style convention and the
+clinging to archaic legacies from the C stone age like the preprocessor and C
+pointer arithmetics do not make the situation any better.
+
+When looking from the sidelines, this dystopic picture suggests that C++ may
+be a lost cause. So people understandably seek salvation in alternatives like
+Rust. Instead of throwing the baby out with the bathwater, however, we went a
+different route: Finding and tuning a custom C++ dialect that largely
+mitigates the safety traps and - compared to contemporary C++ projects - feels
+almost like a different language.
+
+Genode's C++ dialect evolved primarily from an economic perspective.
+Earlier in the project, when haunted by memory-corruption problems or sporadic
+data-race conditions, operating-system development sometimes felt like the
+misery of spending only a miniscule fraction of the day with creating new and
+exciting things while 95 percent of the time went down the drain with the
+question: _What the heck is going on?_
+Worse, the most obnoxious bugs turned out to be shamefully mundane. Finding
+such an issue did not felt like a victory but rather a defeat. A missing lock
+guard, an off-by-one, a missing virtual destructor, an arithmetic overflow, or
+an uninitialized variable - a tiny artifact left in a weak moment and
+overlooked by reviewers - ensued sometimes days of hunting.
+
+This got us thinking about systematic ways to cutting down these 95 percent.
+Two aspects fueled our optimism: First, Genode is a green-field project with
+no API below. So we are in the fairly unique position to make the rules! And
+second, our developer team of a tight-knit group of less than 10 people is
+small enough to agree on the same principles and conventions, and to follow
+them rigorously. Over the years, a stringent and strongly opinionated dialect
+of C++ evolved, which dramatically improved the situation.
+
+
+Narrowing the scope to the operating-system level
+-------------------------------------------------
+
+Our dialect addresses operating-system (OS) code, not application code. These
+are two different worlds.
+Whereas application-level programmers are concerned about optimized code
+paths, cache locality, a high variety of data structures and the ability to
+swap them in-and-out, fine-tuned memory allocators, and convenience features,
+OS code is rather boring in these respects.
+With Genode's system-level code, we strive for minimizing complexity and
+maximizing robustness. This contradicts with the common wisdom that such
+low-level code must always be optimized for performance in the first place.
+But think about it: The OS is just a bureaucratic apparatus
+in-between the applications and the hardware. It doesn't do any meaningful
+work in terms of computation.
+It should be _designed_ to not stand in the way of the application's
+performance. If the data structures within the OS became a bottleneck, the
+software design would call for improvement, not the data structures.
+This argument is especially true for a component-based system like Genode where
+traditional OS functionalities like protocol parsers or cryptographic
+functions are application-level concerns, hence lie outside the scope of our
+C++ dialect.
+
+
+Banning hidden state and hidden side effects
+--------------------------------------------
+
+Genode's C++ dialect deliberately starts at near-zero complexity.
+There is neither a C runtime, nor any trace of the C++ standard library.
+We start with the naked language.
+There is no notion of a 'main' function, no implicit execution of
+global constructors, and no way for anonymous memory allocations.
+A tiny self-sufficient support library gives us support for exceptions and
+runtime type information (RTTI).
+The vocabulary of our dialect is then solely shaped by the self-sufficient
+Genode API, which is small enough to be understood in its entirety by a single
+developer.
+
+In our dialect, a program is modelled as a state machine.
+There is no 'main' function. Instead, the execution starts at a so-called
+'Component::construct' function that takes an interface to the component's
+environment ('env') as argument. The 'env' is the only way for the program
+to produce side effects like I/O or inter-component communication.
+The 'construct' function constructs a 'Main' object, forwarding the 'env'
+as constructor argument. This object is the actual program.
+To convey the mental model behind it: The program is _not_ viewed as
+a _sequence of steps_ but rather viewed as an _object_ that is composed
+out of its building blocks.
+Once the 'construct' function returns, the program becomes
+ready to respond to external events, i.e., incoming inter-component
+communication (I/O).
+In a way, the program's flow of control is turned upside down compared to the
+traditional notion of a 'main' function.
+
+As an immediate consequence, any code of the program is executed within
+meaningful context. E.g., whenever a signal handler is invoked for the 'Main'
+program, the handler is actually a method that can naturally access the
+members of the 'Main' object. So the following rules become practical:
+
+:No singletons: Whenever only a single instance of an object is needed,
+  it can be hosted as a member of the 'Main' object.
+
+:No global variables: There is always a natural context where
+  the state can reside.
+
+:No blocking I/O calls: Instead of blocking for I/O, the component becomes
+  receptive for I/O whenever returning to its idle state.
+  With no blocking calls, there is no hidden state on the stack while
+  blocking.
+
+:No thread-local storage: The context of any flow of execution is always
+  the surrounding object ('Main' object or a 'Thread' object).
+
+:No global constructors needed: The program is explicitly constructed
+  as the 'Main' object.
+
+:No anonymous memory allocations: There exists no default 'new' operator.
+
+Unless the 'env' (or parts thereof) is presented to a sub program,
+a sub program cannot have any side effects to the outside world.
+In particular, no I/O or dynamic memory allocation is possible in the sub
+program. Side effects can only be triggered with the explicit consent of the
+calling code by passing a corresponding interface to the sub program.
+
+
+Static compositions, RAII, and exceptions are our friends
+---------------------------------------------------------
+
+Genode's C++ dialect promotes the static composition of objects from
+other objects, with the 'Main' object being the top level of a hierarchy.
+Code that is traditionally expressed as a sequence of statements
+is instead expressed as a sequence of class members.
+By composing the program as a hierarchy of aggregated members,
+the handling of errors becomes robust. Errors are exceptions that happen at
+construction time. Thanks to the RAII technique of C++, already constructed
+members of a partially constructed object are always orderly destructed.
+There are clear-cut transactional semantics. Either the object could be
+constructed successfully, or not at all. In both cases, the program
+eventually enters a consistent state.
+
+The so-called 'Reconstructible' pattern provides a way to reconstruct parts
+of the program while maintaining the program's static memory layout.
+
+All data types are intrusive. That means that meta data is not
+allocated separately from the managed objects but stored within
+the respective objects. Containers, strings, and even Genode's XML
+generator and XML parser don't perform any dynamic memory allocations.
+
+In cases where dynamic memory allocations are unavoidable, an allocator
+(e.g., a heap) must be explicitly created with the required 'env' resources as
+an ingredient.
+Since memory allocations are deliberate and rare operations,
+the dialect fosters a strong sense of ownership over such dynamic allocations.
+Dynamically allocated objects are usually owned (remembered) by the allocating
+context.
+References to such objects never leave the scope of the owner.
+Whenever an allocated objected must be accessed from outside the owner, lambda
+functions are used as resource monitors.
+
+
+There is much more to come...
+-----------------------------
+
+This posting is meant to kick off a series of short articles, highlighting
+many different aspects of Genode's concious C++ dialect, ranging from stylistic
+considerations, over the avoidance of many C++ traps, to data-structure design.
+Stay tuned.
+
+To get a taste of how the dialect looks in practice, consider examining the
+code of the
+[https://github.com/genodelabs/genode/tree/master/repos/gems/src/app/fs_query - fs_query]
+component. With about 160 source lines (sloccount), it is reasonably small
+while doing meaningful work.
+
