@@ -24,7 +24,7 @@ enable a fairly efficient work flow, one still gets the feeling that the
 packages stand in the way in such situations.
 
 My little _test.run_ script found at
-[https://github.com/nfeske/genode/commit/d4861348b68bcec1a00b1d99f2640b6bc5de96ad - my topic branch]
+[https://github.com/nfeske/genode/commit/b892d4066bb1ca89f39de1a5743ad8e011ebeb43 - my topic branch]
 attempts to regain the former convenience with dealing with low-level tests.
 The basic idea is to feed the run script with a single 'PKG' argument with the
 name of one test package. The run script looks up the matching pkg recipe
@@ -56,13 +56,13 @@ there. So the run script simply tries to find a 'target.mk' file for each
 build path to the list of build arguments.
 
 The last missing piece of the puzzle was the detection of the test's failure or
-success. There are two typical mechanisms a play. First, a timeout indicates
+success. There are two typical mechanisms at play. First, a timeout indicates
 that a test has failed. And second, a known-good log output confirms the
 success of the test. Almost all low-level tests use this simple scheme. The
-information for both mechanisms are present in the form of the runtime's
+information for both mechanisms is present in the form of the runtime's
 '<events>' node. The run script uses this information to feed the run tool's
 'run_genode_until' function. It's funny that _test.run_ actually reverses
-Martin's work when he turned the run script into packages. Martin turned the
+Martin's work when he turned the run scripts into packages. Martin turned the
 formerly used regexp patterns to plain strings intermixed with wildcards and
 applied quoting of special characters (like '<' and '>'). The _test.run_
 script now converts these patterns back to regular expressions.
@@ -77,7 +77,7 @@ directory:
 ! make run/test PKG=test-xml_node KERNEL=linux
 
 It is quite surprising to me how many of the existing tests can be executed
-this way out the box. The tool is certainly not bullet-proof. You may call
+this way out of the box. The tool is certainly not bullet-proof. You may call
 it a hack. But that doesn't make it any less useful. ;-)
 
 Thanks to Martin for pointing me to the '--xpath' feature of 'xmllint' and for
