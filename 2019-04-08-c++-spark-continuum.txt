@@ -1,0 +1,295 @@
+
+
+                     C++ and SPARK as a continuum
+
+
+[https://en.wikipedia.org/wiki/SPARK_(programming_language) - SPARK] is an
+Ada-inspired programming language for high-assurance computing. It was
+designed for the application of formal verification methods to real-world
+software. The prospect of bug-free software is music to our ears! I wonder,
+can there be a love affair between SPARK and Genode's predominant
+implementation language, C++?
+
+At Genode Labs, our first encounter of SPARK was in 2010. Back then, we
+got commissioned a project for developing a small graphics library as well as
+device drivers for Intel graphics and PS/2 input in SPARK 2005. This was quite
+a ride. Usually, one started out with some nicely written code - only a few
+lines - carefully crafted with love and attention. The code would
+work on the first try. The final step would be to make the formal verification
+tools happy. How hard could that be? Well, the tools were not just picky. They
+were an insulting combination of picky and dumb. The picky part did not do any
+harm. I'm grateful whenever a tool calls out my mistakes. But thanks to the
+dumbness - like forgetting once proven verification conditions two steps down
+the road - a once beautiful piece of code could degenerate into a mess of
+repetitions and redundancies under your fingers. At the end of the day, one
+ended up with a _formally proven_ (yay!) ball of mud. The project succeeded
+regardless, which made us immensely proud. But at the same time, we were quite
+happy to put the SPARK "examiner" to rest, I mean, to not ever look at it
+again. The only lasting trace of our engagement was the addition of a
+[https://genode.org/documentation/release-notes/9.11#Zero-footprint_runtime_for_Ada_Spark - zero-footprint Ada runtime]
+to Genode.
+
+Over the years, we kept following SPARK from a distance. After all, the goals
+of the language still resonated very well with us, and we are friends with the
+developers of the [https://muen.sk - Muen] separation kernel who are
+enthusiastic users of the language. You know, social pressure.
+Eventually, the book "Building High Integrity Applications With Spark"
+reignited my interest. Admittedly, I'm not a book person. But this one, I
+enjoyed. The new version of SPARK as described in the book looks nothing
+like SPARK of olde thymes. The cultivation of proper encapsulation (unlike
+SPARK 2005), the sensibly added support for generics, and language-ergonomic
+tricks like disguising verification conditions as assertions, which a
+programmer like me can intuitively understand, left me impressed.
+I wondered, would there be a chance to leverage SPARK within Genode?
+
+Genode uses C++ in a
+[https://genodians.org/nfeske/2019-01-22-conscious-c++ - special flavour]
+as predominant implementation language and this is unlikely to change anytime
+soon. However, there are certain areas in our code base where SPARK could
+shine, in particular when it comes to the parsing of data, the interaction
+with devices, or the implementation of water-tight policies. C++ code can be
+good but proven correct code would be better. But unlike formal verification
+purists, I don't see this as an all-or-nothing question but rather as a
+case-by-case economic consideration. Following this line of thinking, we
+have to embrace the idea of hybrid C++/SPARK components. Can this be a love
+affair? Let's find out.
+
+
+Cohabitation rules
+------------------
+
+At the beginning of a new relationship, it is good to establish a few rules.
+Imagine this SPARK guy moving in into your C++ living community. You better
+tack some rules at the fridge! Here they are:
+
+* C++ code calls C++ code. That's hardly surprising.
+* SPARK code calls SPARK code. Seems fair.
+* C++ code calls SPARK code.
+* *SPARK code never calls C++ code!*
+
+This implies that SPARK code implements functions and state machines but
+cannot block for I/O. From C++ perspective, SPARK code looks like a
+self-contained library.
+
+Genode's API is designed to eliminate implicit side effects from the code.
+With side effects, I refer to I/O, memory allocations, inter-process
+communication, and global variables. To my surprise, SPARK is quite lax
+regarding the latter. The use of package variables and the reliance on
+so-called elaboration code (a form of global constructors) seems to be
+idiomatic in the SPARK universe. To harmonize our designated use of SPARK with
+Genode's philosophy, let's do away with package variables but keep state in
+records only. The allocation of such a record happens outside the package that
+defines the record and its operations.
+In other words, *all* *SPARK* *packages* *must* *be* *pure*. The cool thing is
+that SPARK allows us to enforce such additional rules easily using pragmas.
+You may wonder: Variables need to exist somewhere! If there is no SPARK code
+with any package variable, where are the variables located or allocated?
+In a Genode component, all variables used by SPARK would be allocated by the
+C++ code that invokes the SPARK code. A record defined in SPARK can of course
+aggregate other records in an arbitrarily nested fashion. The instantiation of
+the outer-most compound record, however, just happens outside of SPARK.
+
+
+Modeling C++ objects in SPARK
+-----------------------------
+
+A C++ object corresponds to an instance of a SPARK record. The backing store
+for the object/record is provided by an opaque object at the C++ side,
+represented by a 'Spark::Object' as follows:
+
+! template <Genode::uint32_t BYTES>
+! struct Spark::Object
+! {
+!   static constexpr Genode::uint32_t bytes() { return BYTES; }
+!
+!   struct Object_size_mismatch : Genode::Exception { };
+!
+!   long _space[(BYTES + sizeof(long) - 1)/sizeof(long)] { };
+! };
+
+The 'BYTES' template argument specifies the size of the opaque space reserved
+for the SPARK record.
+To illustrate the implementation of a C++ object using this utility,
+let's use an example class 'Machinery':
+
+! struct Machinery : Spark::Object<4>
+! {
+!   Machinery();
+!
+!   void heat_up();
+!
+!   Genode::uint32_t temperature() const;
+! };
+
+In the "other" world at the SPARK side of the program, the 'Machinery' type
+lives in the form of a private record inside a package of the same name.
+Here is the package specification:
+
+! package Machinery is
+!
+!    pragma Pure;
+!
+!    type Object_Size_Type is mod 2**32 with Size => 32;
+!
+!    type Temperature_Type is mod 2**32 with Size => 32;
+!
+!    type Machinery_Type is private;
+!
+!    function Object_Size (Machinery : Machinery_Type)
+!       return Object_Size_Type
+!    with Export,
+!         Convention    => C,
+!         External_Name => "_ZN5Spark11object_sizeERKNS_9MachineryE";
+!
+!    procedure Initialize (Machinery : out Machinery_Type)
+!    with Export,
+!         Convention    => C,
+!         External_Name => "_ZN5Spark9MachineryC1Ev";
+!
+!    function Temperature (Machinery : Machinery_Type)
+!       return Temperature_Type
+!    with Export,
+!         Convention    => C,
+!         External_Name => "_ZNK5Spark9Machinery11temperatureEv";
+!
+!    procedure Heat_up (Machinery : in out Machinery_Type)
+!    with Export,
+!         Convention    => C,
+!         External_Name => "_ZN5Spark9Machinery7heat_upEv";
+!
+! private
+!
+!    type Machinery_Type is record
+!       Temperature : Temperature_Type;
+!    end record;
+!
+! end Machinery;
+
+_The C symbol names are mangled C++ symbols as obtained from the output of_
+_the 'nm' tool for the compiled the C++ code._
+
+It is fantastic that SPARK gives us the freedom to map a SPARK symbol to
+any C++ symbol we wish and that the Ada/SPARK calling convention is
+compatible with C and C++. This is very powerful. We use this power to our
+advantage to attain code that looks natural on each side of the
+fence. In particular, the 'Machinery' constructor is mapped directly to
+the 'Initialize' procedure that takes the record as 'out' parameter.
+Also the other methods 'temperature' and 'heat_up' are mapped directly
+to their SPARK counterparts. Quite naturally, a C++ 'const &' corresponds
+to a SPARK 'in' parameter whereas a mutable '&' corresponds to an 'out'
+or 'in-out' parameter.
+
+The body of the 'Machinery' package may look like this:
+
+! package body Machinery is
+!
+!    function Object_Size (Machinery : Machinery_Type)
+!       return Object_Size_Type is
+!    begin
+!       return Machinery'Size / 8;
+!    end Object_Size;
+!
+!    procedure Initialize (Machinery : out Machinery_Type) is
+!    begin
+!       Machinery := ( Temperature => 25 );
+!    end Initialize;
+!
+!    function Temperature (Machinery : Machinery_Type)
+!       return Temperature_Type is
+!    begin
+!       return Machinery.Temperature;
+!    end Temperature;
+!
+!    procedure Heat_Up (Machinery : in out Machinery_Type) is
+!    begin
+!       Machinery.Temperature := 77;
+!    end Heat_Up;
+!
+! end Machinery;
+
+The 'Machinery' C++ class is merely an opaque object with a method interface
+to interact with the object.
+It is similar in spirit to the so-called
+[https://en.cppreference.com/w/cpp/language/pimpl - PIMPL] idiom in C++
+except that the backing store for the data members is allocated
+within the 'Spark::Object', not via a dynamic memory allocation.
+
+Our notion of a class does not support inheritance or virtual functions. Of
+course, these concepts can be used on the C++ side. E.g., the 'Machinery'
+class could have virtual methods in addition to being a SPARK object but
+this would be transparent to the SPARK world.
+
+
+Object sizes matter
+-------------------
+
+The above example raises one question though: If the space for the SPARK
+record is allocated as an opaque member variable of the C++ object, how
+does one know the number of bytes needed? Imagine that the SPARK record
+would actually be 12 bytes instead of 4. In this case, the SPARK code
+would happily operate beyond the bounds of the corresponding C++ object.
+To prevent such a disaster, the 'Machinery' package provides the function
+'Object_Size', which returns the size of the 'Machinery_Type' record in
+bytes. By convention, this function is mapped to the C++ function overload
+'object_size(<type>)'. With this convention in place, we can safeguard
+the consistency of the C++ 'Spark::Object' size with the underlying SPARK
+record via a function template like this:
+
+! template <typename T>
+! static inline void Spark::assert_valid_object_size()
+! {
+!   if (object_size(*(T *)nullptr) > T::bytes())
+!     throw typename T::Object_size_mismatch();
+! }
+
+At the construction time of the Genode component, we can add the following
+assertion:
+
+! Spark::assert_valid_object_size<Spark::Machinery>();
+
+Granted, passing a nullptr as in argument into the 'object_size' function
+looks a bit funny but I justify it with the following presumptions: First, the
+'Object_Size' functions are never supposed to actually access the argument.
+Only compile-time-generated meta data is returned. The object should remain
+untouched. Second, the functions are called in this way only at start time of
+the component. So even if the Ada compiler generated unreasonable code that
+accesses the object, the code would produce a null-pointer access right at the
+start time of the component when tested for the first time.
+
+
+Caveats
+-------
+
+I anticipate that - a few exceptions notwithstanding - object definitions will
+generally exist either on the SPARK side or the C++ side, but rarely on both
+sides at the same time. In the rare case where a type is shared by both
+worlds, we need to be extra careful. Such a type must be bit-precise.
+The C++ type must use '__attribute__((packed))' and the SPARK record should
+be defined via the with 'Size => <NUMBER-OF-BITS>' annotation to ensure the
+memory-layout consistency between both world. If such a binary interface uses
+enum values, we have to specify the underlying storage type and define the
+values of each member.
+
+
+Prospects
+---------
+
+The approach outlined above allows us to gradually "SPARKify" Genode
+components by successively and almost seamlessly replacing C++ objects with
+SPARK objects. Such objects can be used in the same way as C++ objects. E.g,
+they can be instantiated any number of times, allocated statically (BSS), or
+dynamically, or used as member variables, or as a stack variable.
+
+By regarding C++ and SPARK as a continuum rather than an black-and-white
+decision, we can use SPARK at places where we regard formal verification as
+most valuable while not restricting Genode components to be entirely static.
+It gives us Genode developers the chance to slowly embrace the application of
+formal methods and recognize their benefit in practice.
+
+Who knows where this takes us? I find it fascinating to explore.
+Furthermore, I learned at this year's FOSDEM about the planned addition of
+[https://fosdem.org/2019/schedule/event/ada_pointers/ - pointers to SPARK]
+similar to the ownership model of Rust. This would eventually clear the
+way for using SPARK in many low-level areas of our code that would be
+clearly out of scope at the moment. Exciting times!
+
