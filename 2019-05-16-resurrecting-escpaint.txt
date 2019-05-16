@@ -1,0 +1,282 @@
+
+
+              Resurrecting Escape Paint with Hatari
+
+
+A recent series of events flared up my enthusiasm for Atari home computers.
+I just couldn't help but draft a plan of bridging this nostalgic trip with
+our modern-day Sculpt OS.
+
+Before Genode was born, I dedicated my life to Atari computers, regarding the
+wonderful people of the Atari demo scene as my second family.
+[http://os.inf.tu-dresden.de/~nf2/easter2002/easter2002.html - This] is
+how my living room looked like back in the day. My entrance into the demo
+scene was a paint program called Escape Paint, which I developed over multiple
+years during the mid 90s for the Atari Falcon. Some years later, when real
+life took over, I had to shelve my beloved Atari computers to make space
+for kids stuff. Even though I kept following the Atari scene from a distance,
+checking the odd news at the [https://dhs.nu - Dead Hackers Society], or
+staring in awe at the fabulous
+[https://www.youtube.com/watch?v=NTGnZTDUKd0 - marvels] released over the
+years, my time was now consumed by the two projects family (three releases) and
+Genode ([https://github.com/genodelabs/genode/releases - 42] releases).
+
+Fast-forward to 2018, when I happened to review the shelved computers one
+evening, my kids encountered those machines for the first time. CRT monitors.
+Disk drives. The slick design of the computers built into those oversized
+keyboards. SCSI cables, Joysticks of various shapes. Attraction. The
+inevitable result was that my kids convinced my wife to dedicate a quarter of
+our living room to Atari computers. This is how our family life looks like
+now:
+
+[image family_life]
+  Kevin and Alan playing River Raid on the Atari 800XE while Dominik is
+  painting on the Falcon using Escape Paint.
+
+My son Dominik using the paint program that I created as a youngster 25 years
+ago - that's the ultimate circle of a geek's life! I'm surprised how those
+machines capture the interest of even modern-day children. The joy of
+typing-in Basic programs
+from the same books I had read, taking the Atari Profibuch as bed-reading
+material, and designing player-missle spites on paper. Such a beautiful sight.
+It goes without saying that these activities drew me in as well. There is
+hardly a better way to spend a shitty-weather winter weekend than implementing
+a Bresenham line algorithm in 6502 assembly using ATMAS-2.
+
+In the intro, I spoke of a series of events. The infiltration of my family
+with Atari was the first event.
+
+A *second* event was Thothy's
+[https://fosdem.org/2019/schedule/event/retro_hatari/ - talk] at FOSDEM about
+the Hatari emulator. There is still a thriving community around it, which is
+fantastic! Looking around, another 32-bit Atari emulator/VM called ARAnyM put
+out a massive [https://github.com/aranym/aranym/releases/ - release] just one
+month ago.
+
+A *third* event was is the release of former proprietary - but now abandoned -
+software under open-source licenses or at least under public domain.
+In particular, Andreas Kromke
+[https://gitlab.com/AndreasK/Atari-Mac-MagiC-Sources - released]
+the MagiC operating system - loved by so many including me - under GPL, and
+the light-weight multi-tasking environment
+[http://www4.pair.com/gribnif/downloads/geneva/ - Geneva] has become
+available under public domain.
+What's even better is that skilled developers like Thorsten Otto immediately
+stepped up [https://github.com/th-otto/MagicMac - curating] the published
+sources. Thanks to his work and documentation, I was able to compile MagiC
+from scratch during the Easter weekend.
+As these environments work nicely together with the free EmuTOS ROM image,
+there is now a light-weight alternative to
+[https://en.wikipedia.org/wiki/FreeMint - FreeMiNT] for packaging and
+distributing completely free disk images of Atari software.
+
+A *fourth* event was an invitation to this year's
+[http://dhs.nu/sommarhack/2019/ - Sommarhack]. I get to meet many of my idols
+and friends in person again!
+
+Inspired by these events, I developed the urge to run Atari software on top
+of [https://genode.org/download/sculpt - Sculpt OS]. Thanks to
+Sculpt's deployment concept, it would be possible to deliver individual Atari
+programs together with a ready configured emulator as one convenient
+Sculpt package that can be installed just like an application, similar
+to how we deploy Firefox on Sculpt using Alexander's
+[http://genodians.org/alex-ab/2019-03-06-disposal-browser-vm - browser VMs].
+
+
+The plan for Escape Paint as Sculpt OS component
+------------------------------------------------
+
+Genode's [https://genode.org/about/road-map - road map] for this year
+puts emphasis on "Bridging Worlds". We seek to find smooth ways of porting
+existing open-source software to Genode and deploy it within Sculpt OS.
+Until now, we used to port 3rd-party software "manually" by writing custom
+build description files for the Genode build system. It is obvious that this
+approach does not scale. Since about one year, we experiment with the idea
+of a
+[https://genode.org/documentation/release-notes/18.11#Initial_version_of_the_Genode_SDK - Genode SDK].
+Instead of porting 3rd-party software into the Genode
+build system, we would instead parametrize the software's original build
+system to produce executable binaries that run on Genode. We actually
+apply this approach for Noux packages (using autoconf) since a long time.
+More recently, [http://genodians.org/ehmry/index - Emery] has generalized the
+concept to non-Noux Genode components by facilitating 'pkgconfig'. I figured
+that the port of Hatari to Genode would be a nice case for exercising the SDK.
+
+
+Full stop! CMake ahead
+----------------------
+
+The Hatari build system uses CMake. Personally, I have never used CMake but
+got the impression that many developers favour it today. For example, seL4
+migrated to it. Also, Qt seems to go the route of eventually replacing their
+custom QMake tools with CMake.
+
+Now, with the porting of Hatari, I'm actually not "using"
+CMake in the sense of writing 'CMakeLists.txt' files. Instead, I'm after
+retargeting CMake to cross compile for Genode. My goal is to avoid any change
+of the original Hatari source tree and build system. To my shock, I quickly
+discovered that CMake is not just a tool but also a giant accumulation of
+heuristics about libraries and compilers. Glancing at
+'/usr/share/cmake-<version>/Modules/' certainly raised my eyebrows.
+I had naively thought this is the job of pkgconfig these days.
+Well, after thinking a bit more about it, this redundancy can probably not be
+avoided as CMake ought to work on platforms where pkgconfig does not exist.
+So there were two bad news for me. First, I cannot simply follow Emery's route
+of using pkgconfig. CMake is simply another universe.
+Second, I got to wade through those CMake modules files. Upon this
+realization, I found it a good time to close the lid of my laptop.
+
+
+Hack'n'Hike to the rescue
+-------------------------
+
+Genode's Hack'n'Hike is an annual gathering of Genode enthusiasts who spend an
+enhanced weekend together at a nice place, hiking at daylight, and hacking on
+fun projects at night time. When attending, it is always good to have a
+faint plan for a hobby project to work on. This year, I successfully wetted
+the appetite of [http://genodians.org/chelmuth/index - Christian] to join me
+on a CMake discovery ride. We know that by connecting our brains together,
+a tedious task can actually become a fun adventure using Club Mate and beer
+for catalysis. Here is what we found:
+
+* To prevent CMake from using its heuristics about the tool chains, we had to
+  create a custom 'Modules/Platform/Genode.cmake' file and tell CMake to
+  use it via the following command-line arguments:
+  ! -DCMAKE_MODULE_PATH=$(PWD)/cmake/Modules
+  ! -DCMAKE_SYSTEM_NAME=Genode
+  The first one tells CMake to look in our local path for modules.
+  The second one tells CMake to include our custom tool-chain definition.
+  Initially, we left this file blank.
+
+* Our idea for supplying API headers to CMake was to use Genode's depot API
+  archives as is. In the concrete case, we need the 'api/sdl' and 'api/libc'
+  archives. Instead of using the latter directly, we conveniently used
+  Emery's pkgconfig rules as follows (snipped from our custom Makefile):
+
+  ! PKG_CONFIG_PATH := $(SDK_DIR)/pkgconfig
+  ! PKG_CONFIG_CMD  := PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) pkg-config
+  !
+  ! CFLAGS  := $(shell $(PKG_CONFIG_CMD) --cflags genode-posix)
+  ! LDFLAGS := $(shell $(PKG_CONFIG_CMD) --libs genode-prg genode-sdl)
+
+  Note that we cannot use 'genode-posix' together with 'genode-sdl' as both
+  libraries take the role of implementing the 'Libc::Component::construct'
+  function. The 'genode-sdl' pkgconfig rule did not exist. So we added
+  one following the pattern of 'genode-posix' but referring to 'sdl.lib.so'
+  instead.
+
+  The LDFLAGS as returned by 'pkgconfig' already contain the right arguments
+  for finding and using Genode's linker scripts.
+
+* CMake uses the GCC frontend as linker. So we have to prefix the 'LDFLAGS'
+  with '-Wl,':
+
+  ! LINK_WRAPPER_ARG := -Wl,
+  ! LDFLAGS := -nostdlib $(addprefix $(LINK_WRAPPER_ARG),$(LDFLAGS))
+
+* To point CMake to the Genode tool chain, we used following command-line
+  argument:
+
+  ! -DCMAKE_C_COMPILER=$(CROSS_DEV_PREFIX)gcc
+
+  Here, 'CROSS_DEV_PREFIX' points to _/usr/local/genode-gcc/bin/genode-x86-_.
+
+* To supply include and library search paths to CMake, the following
+  command-line arguments become handy:
+
+  ! -DCMAKE_SYSTEM_INCLUDE_PATH=$(API_INC_DIRS)
+  ! -DCMAKE_SYSTEM_LIBRARY_PATH=$(LIB_DIRS)
+
+  The 'API_INC_DIRS' is a colon-separated list of include paths. We can
+  let them point directly into the corrsponding depot's api archives.
+  For the 'LIB_DIRS' we cowardly specified the path to the _bin/x86_64/sdl_
+  archive. This should better be replaced by pointing to an ABI stub library.
+
+* CMake expects libraries be named after 'lib<name>.so' whereas Genode
+  names libraries '<name>.lib.so'. Fortunately, this naming convention
+  can be tweaked in the _Modules/Platform/genode.cmake_ file:
+
+  ! set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib.so")
+  ! set(CMAKE_FIND_LIBRARY_PREFIXES "")
+
+  Cool, isn't it?
+
+* The 'FindSDL' module of CMake implements heuristics for determining
+  the SDL version. Those heuristics stumbled over our lower-case naming
+  of 'sdl.lib.so'. Since there are no knobs to tweak the heuristics,
+  we bended and changed our sdl/src archive such that a symlink 'SDL.lib.so'
+  is created in addition to the 'sdl.lib.so' binary.
+
+  Still, the SDL detection module did not work reliably. Finally, we found
+  out that Hatari comes with a custom version of 'FindSDL'. So we were
+  staring at the wrong place for quite some time. Ultimately, the following
+  command-line argument convinced Hatari to use SDL version 1:
+
+  ! -DENABLE_SDL2:BOOL=0
+
+* Hatari happens to use a few double-float libm functions are we never
+  needed before. So we have to up our game with Genode's libc.
+
+  As we did not want to modify the libc just now, we replaced the function
+  calls with their plain float counterparts in the Hatari source code. Of
+  course, this is just a dirty quick hack.
+
+It took us a while of digging in the CMake modules and sources to find those
+hooks and overcome a few little stumbling blocks. But with the steps above,
+CMake happily baked an Hatari executable binary for Genode!
+
+For test-driving the binary, we just tweaked the sdl.run script in the
+genode-world repository and added a '<start>' node for Hatari as follows:
+
+! <start name="hatari">
+!   <resource name="RAM" quantum="32M"/>
+!   <config>
+!     <vfs>
+!       <dir name="dev">
+!          <log/>
+!          <inline name="rtc">2000-01-01 00:00</inline>
+!       </dir>
+!       <dir name="share"> <dir name="hatari">
+!         <rom name="tos.img"/> </dir> </dir>
+!       <tar name="escpaint.tar"/>
+!     </vfs>
+!     <libc stdout="/dev/log" rtc="/dev/rtc"/>
+!
+!     <arg value="hatari"/>
+!     <arg value="--machine"/>      <arg value="falcon"/>
+!     <arg value="--monitor"/>      <arg value="vga"/>
+!     <arg value="-d"/>             <arg value="/ESCPAINT"/>
+!     <arg value="-s"/>             <arg value="14"/>
+!     <arg value="--timer-d"/>      <arg value="1"/>
+!     <arg value="--fast-boot"/>    <arg value="1"/>
+!     <arg value="--cpuclock"/>     <arg value="16"/>
+!     <arg value="--confirm-quit"/> <arg value="0"/>
+!     <arg value="--dsp"/>          <arg value="none"/>
+!     <arg value="--statusbar"/>    <arg value="0"/>
+!     <arg value="--zoom"/>         <arg value="2"/>
+!     <arg value="--borders"/>      <arg value="0"/>
+!   </config>
+! </start>
+
+The 'escpaint.tar' archive contains the files of an Atari system that
+includes Geneva and Escape Paint. Geneva's 'GEM.CNF' contains a line
+that starts Escape Paint automatically. So the system boots directly
+into Escape Paint. The result running on Genode looks like this:
+
+[image escpaint]
+
+I'm super happy that the plan worked out so well. Thanks to Christian
+for joining the CMake exploration. I wouldn't have expected this result
+in just one evening.
+
+Now, the outcome of this experiment is still not ready to real use. Apart
+from minor details like extending Genode's libc with the missing libm
+functions, Sculpt needs to provide a proper solution for capturing (and
+releasing) the mouse pointer and for supplying relative mouse events to
+the Hatari emulator. Right now, with only absolute pointer positions, Escape
+Paint is a little awkward to use. But it works!
+
+Besides Hatari, I plan to condense the reusable parts of the findings above
+into a little CMake wrapper tool so that other CMake projects can be ported to
+Genode more easily.
+
