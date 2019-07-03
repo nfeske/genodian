@@ -1,0 +1,259 @@
+
+
+                  Copy and paste with Sculpt OS 19.07
+
+The upcoming Sculpt OS version 19.07 allows the user to copy and paste
+text between virtual machines, terminal windows, Qt5 applications, and
+the administrative interface (Leitzentrale). This article sheds light
+on the underlying mechanism and its security considerations, shows how to
+configure subsystems to use the new feature, and covers a few caveats
+you may encounter.
+
+
+Productivity boost or security jeopardy?
+----------------------------------------
+
+A system-global clipboard is universally expected by end users. We don't
+think twice about copying an URL to a web browser, an email address from a
+web page to an email client, or some personal notes to a document, or a
+password from a password manager to a password-entry dialog. The underlying
+assumption is that the participating applications behave well intentioned.
+
+However, the complexity of the software stacks and the fact
+that applications literally change under our fingers via automated updates
+make this assumption overly optimistic. For some people - like me - it is
+unreasonable to entrust software as complex and opaque as a web browser with
+my personal notes. I distrust such software. But at the same time, I want
+to run it because it so useful. Sculpt OS allows us to safely install and run
+software we don't trust by rigorously sandboxing it. The sandboxing ensures
+that different applications remain isolated from each other and
+from the surrounding system. Information can flow from one application to
+another only if explicitly permitted by the user.
+
+A global clipboard shared by all applications fundamentally undermines
+this idea. If implemented naively - like one shared mutable buffer - any
+two conspiring applications can exchange arbitrary data via the shared
+clipboard without the user knowing. Also, any running network-facing
+application may snoop the clipboard and send content to some remote
+party without the consent of the user. It seems like the convenience and
+productivity of a shared clipboard must be traded against privacy and
+security concerns. Does it?
+
+Fortunately, we are not the first ones facing this problem. The people behind
+the Qubes OS project share the same principle of security by
+compartmentization as we do and addressed the exchange of data between
+security domains many years ago.
+[https://www.qubes-os.org/doc/copy-paste/ - Qubes' solution] is a two-staged
+mechanism.
+
+# The user presses a keyboard shortcut (like Control-C) to copy data
+  from one domain into a domain-local clipboard that is only visible by
+  the domain itself and the Qubes system.
+
+# The user presses another keyboard shortcut (Control-Shift-C) - handled
+  by the Qubes system - to express the intent to copy the domain-local
+  clipboard content to a system-global clipboard.
+
+# The user switches to another domain where to paste the information.
+
+# By pressing a third keyboard shortcut (Contol-Shift-V), the user instructs
+  the Qubes system to copy the global clipboard content into the domain-local
+  clipboard of the now-focused domain.
+
+# Finally, with the content readily available at the target domain's
+  local clipboard, a fourth keyboard shortcut (Contol-V) can be invoked
+  to paste the content from the domain's local clipboard to the application.
+
+The Qubes way nicely prevents the misuse of the global clipboard as a covert
+channel between conspiring applications and mitigates the risk of accidentally
+leaking information to an application that snoops on the clipboard. That
+said, the need to invoke four consecutive keyboard shortcuts is arguably a
+usability compromise. It certainly requires some getting-used-to, and
+encumbers mouse-driven work flows like selecting copy and paste from a context
+menu.
+
+
+Genode's clipboard mechanism
+----------------------------
+
+With Sculpt OS, I wanted to test the waters for a different idea, based on
+the following line of thoughts:
+
+* Any legitimate interplay of an application with the clipboard is ultimately
+  the result of the user interacting with the application, either by a mouse
+  click or a key being pressed on the keyboard. Only the application knows
+  the concrete key or button. For one application it may be Control-C, for
+  another application, it may be the selection of a menu entry with a mouse
+  click, or in a Unix terminal, it may be the execution of a command.
+  But as a general rule,
+  _there is no legitimate clipboard use without a button press!_
+
+* In Genode, the input focus is ultimately known by the low-level GUI server
+  called nitpicker. At any time, the GUI server knows the identity (aka label)
+  of the application the user currently interacts with. It also knows whether
+  or not the user interacts with the currently focused application at all.
+  E.g., reading a page of a document is not an interaction. So any clipboard
+  interaction of the document viewer would be implausible.
+
+* The clipboard uses Genode's ROM and report inter-component interfaces
+  to allow applications to request and provide clipboard content.
+  The clipboard knows the identity of each client, which corresponds to
+  the client's (unforgeable) session label.
+
+Together, the GUI server and the clipboard server have all information
+needed to check the plausibility of any application's attempt to interact with
+the clipboard. The clipboard can hence implement a dynamic information-flow
+policy as follows:
+_An application can copy data to the clipboard or retrieve_
+_data from the clipboard only if the user supplied a button press event_
+_to the application during the last 500 milliseconds._
+
+What is the effect of this simple dynamic policy?
+
+* No application other than the one focused by the user can read clipboard
+  content. This mitigates clipboard-snooping attempts by applications
+  unknown to the user.
+
+* The integrity of clipboard content cannot be harmed by any application
+  the user does not interact with.
+
+* If two conspiring applications try to use the clipboard as a covert channel,
+  the rate of the covert information flow is bounded by the rate of how often
+  the user switches the focus between both applications.
+
+* The user can maintain the intuitive notion of copy and paste. It just
+  works.
+
+Still, there may be situations where the information flow to and from the
+clipboard must be subjected to a strict static policy, in particular in
+multi-level security systems. To accommodate such use cases, Genode's clipboard
+supports a whitelist of information flow policies between security domains.
+In the default Sculpt system, there are two domains defined, namely "desktop"
+and "leitzentrale". By configuring the clipboard's information-flow policy,
+one can enforce for example that information can flow only from the desktop to
+the leitzentrale but not in the other direction.
+
+
+Integration in Sculpt OS
+------------------------
+
+The global clipboard is part of the static part of the Sculpt system,
+analogously to the nitpicker GUI server. It provides a ROM service that
+enables its clients to retrieve clipboard content, and a report service
+for posting new clipboard content. To perform the dynamic policy described
+above, the clipboard receives the information about the currently focused
+GUI application from the GUI server.
+
+The clipboard's ROM and report services are provided to Sculpt's runtime
+subsystem. Typically - when using Sculpt as a desktop OS, the runtime hosts
+a window manager. Applications interact with the window manager instead of
+the low-level nitpicker GUI server of the static system. The situation looks
+as follows:
+
+[image sculpt_clipboard]
+
+As depicted, the window manager interposes the interaction of the application
+with the low-level GUI server. The GUI session is connected to the GUI server
+whereas the clipboard ROM and reports sessions are connected to the clipboard.
+The annotations show the session labels at the various stages of the session
+creation. E.g., when a session request arrives at the window manager, the
+client's session is labeled as "app". When the session request arrives at
+the clipboard server, the full path of the session creation becomes known
+to the clipboard server, which serves as the identity of the application.
+Since the labels observed by the GUI server are consistent with ones observed
+by the clipboard, the clipboard can interpret the focus information as
+provided by the GUI server to implement its dynamic information-flow policy.
+
+For using the global clipboard in Sculpt, pay attention to the session
+routing:
+
+* The clipboard ROM and report sessions of the window manager must be
+  routed to the "global clipboard".
+
+* The clipboard ROM and report sessions of window-manager clients must
+  be routed to the window manager. If you mistakenly route them to the
+  global clipboard, the clipboard won't be able to match the session labels
+  against the focus and will deny all interactions.
+
+
+Terminal windows
+----------------
+
+Any text visible in the terminal can be selected in the so-called selection
+mode, which can be activated by holding the left shift key. While the
+selection mode is active, the text position under mouse pointer is highlighted
+and the user can select text via the left mouse button. Upon release of the
+mouse button, the selection is reported to the clipboard. Vice versa, the
+terminal allows the user to paste the clipboard content by pressing the middle
+mouse button, similar to the use of the X11 selection buffer.
+
+This works for the Leitzentrale's inpect window as well as the noux-system
+subsystem.
+
+As a word of caution, the terminal does not (yet) provide protection against
+"pastejack" or similar attacks. Don't paste selections from a web browser
+directly into a shell.
+
+
+Qt5 applications
+----------------
+
+Qt5 applications can make use of the clipboard mechanism by setting the
+application's '<config>' attribute 'clipboard="yes"'. This is done for the
+qt5-textedit example.
+
+
+Virtual machines
+----------------
+
+You can use the clipboard mechanism with VirtualBox guest additions. Just
+add the following node to your 'machine.vbox' file as a sub node of the
+'<Hardware>' node:
+
+! <Clipboard mode="Bidirectional"/>
+
+As a caveat, I have noticed that the shared clipboard sometimes stops working
+in my guest Linux system. I have not investigated this problem but just
+noticed that it can be cured by killing and starting the 'VBoxClient' program
+manually.
+
+! VBoxClient --clipboard
+
+
+Tweaks and troubleshooting
+--------------------------
+
+You can find the clipboard configuration at _/config/clipboard_. By default,
+it looks as follows:
+
+! <config verbose="no" match_labels="yes">
+!   <flow from="leitzentrale" to="desktop" />
+!   <flow from="desktop" to="leitzentrale" />
+!   <policy label_prefix="leitzentrale" domain="leitzentrale"/>
+!   <default-policy domain="desktop"/>
+! </config>
+
+By setting the 'verbose' attribute to "yes", you can closely follow whenever
+new clipboard content arrives. The domain names mentioned in the <flow>
+nodes correspond to the domains declared in the nitpicker configuration.
+The policy permits the bidirectional flow between the leitzentrale and the
+desktop. However, since the 'match_labels' attribute is enabled, the
+dynamic policy as described above is in effect.
+
+
+More options ahead
+------------------
+
+To wrap up this article, let me highlight that the above discussed mechanism
+is not intended as _the single true_ solution. The beauty of the construction
+lies in the fact that the clipboard service is based on Genode's plain generic
+ROM and report session interfaces. So in principle, alternative clipboard
+implementations can be realized as regular components installed and deployed
+in Sculpt's runtime. This opens us a new playing field for creativity.
+For example, a clipboard that mimics Qubes approach could be implemented
+that way. Or a clipboard that features a graphical user interface to present
+a history of selections. Or one that discards the content after first use.
+It goes without saying that an application's clipboard ROM session (for
+obtaining clipboard content) and its report session (for posting clipboard
+content) could be routed to even different components, which might not merely
+transport the content but may parse, filter, or translate it.
