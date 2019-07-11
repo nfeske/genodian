@@ -1,0 +1,278 @@
+
+
+                            Speaking of Security
+
+
+The term _security_ is overloaded to a point that makes it almost meaningless.
+On our website, we speak of Genode as a technology for building highly
+_secure_ operating systems. But what does that even mean?
+Let's take a closer look at the security landscape at large, and our focus
+in particular.
+
+With data breaches and cyber attacks covered by the main-stream media almost
+every day, IT security has gained significant public and political attention,
+to the effect of the mushrooming of well-funded cyber-security agencies, and
+growing public funding opportunities. Unfortunately, one barely sees tangible
+mission statements behind such initiatives. The justifications and goals
+behind such investments remain muddy. IT security can mean anything from
+using https, over researching quantum computers, over crafting exploits, over
+malware analysis, to - well - not mindlessly clicking on email attachments.
+
+In contrast, when we Genode developers discuss security, we attribute a
+clear-cut meaning to this term. Unfortunately, this connotation does not
+help when speaking with people outside our bubble. Hence, we often find
+us in the position of explaining ourselves, even in conversations with other
+IT-security professionals. To lift those clouds, I tried to come up with some
+kind of taxonomy:
+
+[image security_landscape]
+
+Disregarding offensive disciplines, IT security is generally concerned about
+protecting of the confidentiality of information, preserving the integrity of
+data and the IT infrastructure used for processing the data, and the
+availability and liveliness of IT services. In the diagram, each column
+corresponds to one of these objectives.
+
+
+One topic from different perspectives
+#####################################
+
+The three goals can be viewed from a variety of perspectives. Each row of the
+diagram presents a different one. There is no right or wrong perspective.
+Perspectives may also overlap or complement each other. Depending on the
+perspective of an IT-security specialist, the same goals are pursued by
+different means and produce different outcomes. In the following, I'll present
+the various perspectives from my - arguably strongly biased - point of view.
+
+
+Cryptography perspective
+========================
+
+Cryptography is math. Cryptographic algorithms are used as basic building
+blocks for ciphering and deciphering information, and for detecting unexpected
+mutation of information. It goes without saying that they are super important.
+Fortunately, for practical means, they are a solved problem. AES, SHA256,
+RSA, elliptic curves, etc. exists and are universally known to work well.
+
+Granted, quantum computing is often touted as the sword of Damocles that ought
+to bring the apocalypse on today's public-key cryptography. However, the huge
+IT security problems of today have arguably nothing to do with the limitations
+of today's cryptographic algorithms. Let's face it, new math will not improve
+our today's dire state of IT security. The problems are not the math. They
+lie elsewhere.
+
+
+Network-security perspective
+============================
+
+Network security is concerned with protecting the transportation of information,
+hiding the information from men in the middle, authenticating communication
+partners, controlling the routing of communication through the network,
+detecting the malicious replay of communication, and preventing the silent
+mutation of data while transferred.
+
+Network security is usually attained by end-to-end encryption using standard
+protocols like IPSec, TLS, or SSH. The patterns are well known if not to say
+boring, in a very positive sense. From my perspective, the most exciting
+recent contribution in this area is
+[https://en.wikipedia.org/wiki/WireGuard - WireGuard], which overcomes
+the massive complexity of the standard protocols.
+
+There are rarely network-security breaches at the protocol level. The
+problems usually lie in the implementation -
+[https://en.wikipedia.org/wiki/Heartbleed - Heartbleed] comes to mind -
+or the mismanagement of cryptographic credentials, e.g., when a browser
+vendor ships custom SSL certificates.
+
+As Genode developers, network security is certainly not our core area of
+competence. We are almost never talking about network security but use
+the established building blocks for network communication.
+
+
+Operational-security perspective
+================================
+
+Operational security remains an omnipresent topic, suggesting that computer
+users are at fault for IT-security problems. Well, sometimes they are. In the
+light of USB-killer devices, plugging a random USB stick found at the parking
+lot into your machine is certainly not the best idea. But blaming the user for
+opening an email attachment? Come on!
+
+These mundane examples aside, operational security extends to the application
+of good practices, the certification of development and deployment processes,
+the cultivation of open-source software built from source in a reproducible
+manner, the use of proper locks on the doors, or the independent auditing of
+critical infrastructure.
+
+I have to admit that Genode does not contribute to any of those topics.
+
+
+Posthumous-security perspective
+===============================
+
+With posthumous security, I refer to specialists asking the question: "What the
+hell went wrong?" A disaster happened. Think of a power outage of large
+country region, a massive leak of compromised customer data, internet traffic
+taking suspicious routes, the unrecoverable loss of data. Now, a poor soul is
+tasked to make a clue out of this mess, estimate the reach of the problem,
+find interim mitigations, and eventually uncover the root cause of the
+trouble.
+
+The problem comes down to _understanding_ the situation, and tools like
+honeypots, malware analysis frameworks, debuggers, or utilities for data
+forensics help with that.
+
+It probably comes at no big surprise that Genode is not related to the
+problem space of posthumous security.
+
+
+Reactive-security perspective
+=============================
+
+In contrast to posthumous security, which is concerned about gaining insights,
+reactive security is all about _detecting_ and _responding_ to problems.
+It is *not* about the *prevention of problems*!
+
+For example, a watchdog or lockstepped execution mechanism may continuously
+self-test a system, entering a fail-safe or fail-secure state once the system
+behaves unexpectedly. The system may become unusable that way, but it won't
+leak sensitive information.
+
+The most prominent example for reactive security, however, is antivirus
+software. Once a virus scanner detects a virus, it's like shutting the stable
+door after the horse has bolted. It is already too late. All one can do is to
+_react_. Wiping the virus from the machine? One never knows, what traces and
+backdoors the malicious code has already left on the system at that point.
+
+Computer users are made to believe that there is a cure for a virus on
+the computer - analogously to how we are used to curing a cold with some
+medicine. This is of course a fairy tale, but a super lucrative business!
+
+Antivirus software vendors effectively ask for protection money to keep
+computers "healthy". Computers ought to take their medicine, right? Regularly
+at that, to stay immune against the latest kind of infection in circulation.
+A constant cash flow for the vendors.
+Still, even when dutifully paying up, the "protection" remains a snake-oil
+solution because security incidents are detected after the fact.
+
+The bottom line is that reactive security is concerned with symptoms,
+not addressing root causes. There is an obvious conflict of interests of
+"security vendors" because solving the root cause would dry up the revenue
+stream for selling medicine.
+
+
+Attack-mitigation perspective
+=============================
+
+Threat-mitigation at the operating-system level is the cat-and-mouse game
+between attackers and defenders where defenders presumably increase the costs
+of an attack while the attacker has to become more and more sophisticated
+in each round.
+There is no doubt that features like address-space randomization or
+stack-overflow protection help to hamper the outcome of potential attacks.
+When taking existing commodity operating-system architectures, hugely complex
+monolithic software stacks, and unsafe programming languages as a given, the
+application of state-of-the-art threat-mitigation measures seems indispensable.
+
+That said, similar to reactive security, most state-of-the-art
+mitigation techniques address symptoms instead of the root cause of the
+problem, which is the missing separation of duties (and privileges) in today's
+software stacks. Mitigation techniques are crafted with the same line of
+thinking as Kevin in the movie "Home Alone". He knows that the burglars are
+able to enter his house. There are too many vulnerabilities like unsecured
+windows, rusty locks, or weak cellar doors. To defend the house, Kevin spills
+marbles on the floor, installs trip wires, and constructs all kinds of funny
+traps within the house.
+
+_If the house is indefensible, you better install some tripwires inside!_
+
+
+Resilience perspective
+======================
+
+Resilience addresses security from a different angle. Instead of relying on
+trip wires and traps, or following "best practices" like putting cash
+at random places instead of the kitchen table, it focuses on the idea to
+prevent problems in the first place rather than dealing with them.
+
+For the resilience of a building and a large software structure alike,
+the attack surface is critical. The smaller the attack surface, the higher
+the resilience of the system. With no attack surface, problems bounce off
+the walls. There are two principle schools of thought of how the attack
+surface of software can be dwarfed or even eliminated, striving for
+correctness and compartmentalization.
+
+[image resilience]
+
+The guaranteed *correctness* of software can in principle be attained by
+applying formal verification methods, which produce a mathematical proof
+that the software implementation fulfills its specification. Such a proof
+leaves no room for bugs and thereby rules out the presence of vulnerabilities.
+
+The second school of thought - compartmentalization - acknowledges that software
+is generally flawed, which is strongly supported by reality. However, unlike
+traditional operating systems, compartmentalization allows for
+the *planning for the worst case*. Breakage happens. But the damage remains
+constrained. The compartmentalization of software applies the strict separation
+of concerns to software functionality. Instead of entrusting one single
+program with a difficult task, the task is broken up into many sub tasks where
+each is handled by a separate program isolated from the others. The approach
+depends on the ability to isolate programs from one another. This can be
+achieved, e.g., by using multiple air-gapped devices, by encapsulating
+programs via language runtimes (WebAssembly or Berkeley Packet Filter come to
+mind), or by leveraging hardware-based memory protection. Genode focuses on
+compartmentalization based on latter, facilitating both virtual address spaces
+and virtualization.
+
+For both directions correctness and compartmentalization, *complexity is the enemy!*
+Formal verification is applicable to relatively small programs only. For
+compartmentalization, high complexity of the isolation mechanism defeats the
+strength of the isolation.
+
+
+Compartmentalization with Genode
+################################
+
+Genode reduces the attack surface on software similarly to how bulkheads
+reduce seafaring risks.
+
+[image bulkhead]
+
+Like bulkheads, Genode is designed for
+
+* Structural integrity,
+* Strong walls between compartments,
+* Minimizing of outside-facing doors and windows that may be misused to
+  illegitimately enter the structure (attack surface from the outside),
+* Locked doors between compartments that cannot be circumvented without
+  authorization, The cook cannot enter the machine room. The machinist
+  cannot enter the kitchen. However, the machinist may eat the meal
+  prepared by the cook.
+* Storing treasures in vaults.
+
+The sole purpose of the kernel is the creation of isolated compartments and
+the controlled and explicitly authorized interaction between compartments. The
+less complex the kernel, the smaller is the chance of cracks in the walls
+between the compartments. With a microkernel of less than 15K lines of code,
+there is a realistic chance that the kernel is completely free from
+vulnerabilities.
+
+With the correctness of the kernel assured, the system structure as set forth
+by Genode paves the ground for the realistic assessment of residual risks.
+For any compartment, one may investigate the following questions:
+
+* How can the compartment possibly be reached by an attacker?
+  E.g., a network-facing program may be at high risk, compared to a
+  program that drives a single non-network device.
+
+* What would happen in the event the compartment gets compromised?
+
+* Assuming the compartment falls completely into the hands of an attacker,
+  what negative effects on other compartments and the system as a whole
+  could the attacker accomplish?
+
+* What is the complexity of the compartment and its transitive dependencies -
+  the trusted computing base of the compartment?
+
+_Security becomes quantifyable._ That is what we mean when speaking of security.
+
