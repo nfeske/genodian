@@ -1,0 +1,153 @@
+
+
+
+                     New Challenges ahead
+
+
+We maintain a collection of future project ideas on
+[https://genode.org/about/challenges - a dedicated website].
+Today, I reviewed and updated the topics. Let me present the ideas.
+
+
+Native Open-Street-Maps (OSM) client
+------------------------------------
+
+When using Sculpt OS, we regularly need to spawn a fully fledged web
+browser in a virtual machine for using OSM or Google maps. The goal
+of this project would be a native component that makes maps functionality
+directly available on Genode, alleviating the urge to reach for a SaaS
+product. The work would include a review of existing OSM clients regarding
+their feature sets and the feasibility of porting them to Genode.
+Depending on the outcome of this review, an existing application could
+be ported or a new component could be developed, e.g., leveraging Genode's
+Qt support.
+
+
+OpenJDK (updated)
+-----------------
+
+[http://openjdk.java.net/ - OpenJDK] is the reference implementation of the
+Java programming language and hosts an enormous ecosystem of application
+software.
+
+Since
+[https://genode.org/documentation/release-notes/19.02#Showcase_of_a_Java-based_network_appliance - version 19.02], 
+Genode features a port of OpenJDK that allows the use of Java for networking
+applications.
+
+The next step would be the creation of Genode-specific native classes that
+bridge the gap between the Java world and Genode, in particular the glue
+code to run graphical applications as clients of Genode's GUI server. Since
+OpenJDK has been ported to numerous platforms (such as Haiku), there exists
+a comforting number of implementations that can be taken as reference.
+
+
+Genode on the Librem5 phone hardware
+------------------------------------
+
+Even though there exists a great variety of ARM-based SoCs, Genode
+primarily focuses on the NXP i.MX family because it is - in contrast
+to most SoCs in the consumer space - very liberal in terms of
+good-quality public documentation and reference code, and it scales
+from industrial to end-user-facing use cases (multi-media).
+
+The [https://puri.sm/products/librem-5/ - Librem5] project - with its
+mission to build a trustworthy mobile phone - has chosen the i.MX family as
+the basis for their product for likely the same reasons that attract us.
+
+To goal of this work is bringing Genode to the Librem5 hardware.
+For the Librem5 project, Genode could pave the ground towards new use cases
+like high-security markets where a regular Linux-based OS would not be
+accepted. For the Genode community, the Librem5 hardware could become an
+attractive mobile platform for everyday use, similar to how we developers
+use our Genode-based [https://genode.org/download/sculpt - Sculpt OS] on our
+laptops.
+
+
+Xlib compatibility
+------------------
+
+Developments like Wayland notwithstanding, most application software on
+GNU/Linux systems is built on top of the Xlib programming interface.
+However, only a few parts of this wide interface are actually used today.
+I.e., modern applications generally deal with pixel buffers instead of
+relying on graphical drawing primitives of the X protocol. Hence, it seems
+feasible to reimplement the most important parts of the Xlib interface to
+target Genode's native GUI interfaces (nitpicker) directly. This would
+allow us to port popular application software to Sculpt OS without
+changing the application code.
+
+
+Bump-in-the-wire components for visualizing session interfaces
+--------------------------------------------------------------
+
+Genode's session interfaces bear the potential for monitoring and
+visualizing their use by plugging a graphical application
+in-between any two components. For example, by intercepting block
+requests issued by a block-session client to a block-device driver,
+such a bump-in-the-wire component could visualize
+the access patterns of a block device. Similar ideas could be pursued for
+other session interfaces, like the audio-out (sound visualization) or NIC
+session (live visualization of network communication).
+
+The visualization of system behavior would offer valuable insights,
+e.g., new opportunities for optimization. But more importantly, they
+would be extremely fun to play with.
+
+
+Hardware-accelerated graphics for virtual machines
+--------------------------------------------------
+
+In
+[https://genode.org/documentation/release-notes/17.08#Hardware-accelerated_graphics_for_Intel_Gen-8_GPUs - Genode 17.08],
+we introduced a GPU multiplexer for Intel Broadwell along with support
+for Mesa-based 3D-accelerated applications.
+While designing Genode's GPU-session interface, we also aimed at supporting
+the hardware-accelerated graphics for Genode's virtual machine monitors like
+VirtualBox or Seoul, but until now, we did not took the practical steps of
+implementing a virtual GPU device model.
+
+The goal of this project is the offering of a virtual GPU to a Linux guest
+OS running on top of Genode's existing virtualization and driver
+infrastructure.
+
+
+Microkernelizing Linux (updated)
+--------------------------------
+
+Thanks to Genode's generic interfaces for I/O access as provided by core, all
+Genode device drivers including drivers ported from Linux and gPXE can be
+executed as user-level components on all supported microkernels. However, so
+far, we have not enabled the use of these device drivers on Linux as base
+platform. The goal of this project is the systematic replacement of in-kernel
+Linux device drivers by Genode processes running in user space, effectively
+reducing the Linux kernel to a runtime for Genode's core process. But moving
+drivers to Genode processes is just the beginning. By employing further
+Genode functionality such as its native GUI, lwIP, and Noux, many protocol
+stacks can effectively be removed from the Linux kernel.
+
+In 2018, Johannes Kliemann pursued this topic to a state where Genode
+could be used as init process atop a customized Linux kernel.
+[https://lists.genode.org/pipermail/users/2018-May/006066.html - His work]
+included the execution of Genode's regular device drivers for VESA and
+PS/2 as regular Genode components so that Genode's interactive demo
+scenario ran happily on a laptop. At this time, however, only parts of
+his results were merged into Genode's mainline.
+
+The goal of this project is to follow up on Johannes' work, bring the
+[https://github.com/genodelabs/genode/pull/2829 - remaining parts] into
+shape for the inclusion into Genode, and address outstanding topics, in
+particular the handling of DMA by user-level device drivers. Further down
+the road, it would be tempting to explore the use of
+[https://en.wikipedia.org/wiki/Seccomp - seccomp] as sandboxing mechanism
+for Genode on Linux and the improvement of the Linux-specific implementation
+of Genode's object-capability model.
+
+
+Further ideas?
+--------------
+
+Do you have further ideas about future research or development topics
+around Genode that you like to see listed? Please don't hesitate to get in
+touch by commenting on Reddit at /r/genode or posting to Genode's mailing list.
+
