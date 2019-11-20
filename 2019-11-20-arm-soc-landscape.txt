@@ -1,0 +1,184 @@
+
+
+              The ARM SoC landscape from Genode's perspective
+
+
+We get repeatedly asked for our opinion about ARM system-on-chips (SoCs)
+suitable for the use with Genode. Even though Genode supports the ARM
+architecture since 2009, the answer has remained anything but simple.
+This article presents constraints faced by a small player attempting to
+realize an ARM-based product that deviates from the beaten track of using a
+Linux-based OS. It should not be regarded as ground truth but rather as the
+subjective perspective of Genode Labs.
+
+The ARM ecosystem differs fundamentally from the PC market
+----------------------------------------------------------
+
+X86 PC platforms are highly standardized and generally well documented.
+For example, all PC products - regardless of their form factor and set of
+peripheral devices - are based on general-purpose interfaces like PCI, USB,
+and ACPI, thereby providing generic means to enumerate and manage devices.
+Low-level devices like interrupt controllers, system timers, and IOMMUs are
+standardized too, even between competing CPU vendors like AMD and Intel.
+This situation is to the great benefit of OS vendors, which can target a vast
+variety of platforms with the same fundamental drivers and protocols. Even
+though the commonality of PC platforms ends at the level of peripheral drivers
+(wireless, networking, graphics), the common ground shared by all PC vendors
+is substantial. This common ground is generally documented, publicly
+discussed, open-source friendly, and well understood.
+
+The ARM ecosystem is in stark contrast to the x86 world. Whereas the x86 chip
+market is dominated by very few vendors (Intel, AMD, VIA), ARM's business
+model is based on IP-core licensing to a vast number of chip (SoC) vendors on
+liberal terms. Even though SoC vendors use the same CPU core and ISA, their
+common ground ends at this point. Low-level concepts like booting the system,
+memory-layout detection, device discovery, cache management, the bootstrapping
+of secondary CPU cores, device power controlling, bus controllers, or
+interrupt routing are not standardized. The great benefit of this approach is
+the ability of SoC vendors to innovate independently from each other, and to
+target their chips extremely close to specific markets. For example, energy
+efficiency has been a major concern for low-power embedded systems and mobile
+devices, which prompted SoC vendors to explore vastly different energy-saving
+approaches. Energy efficiency has seen dramatic improvements in the ARM world
+that could not be matched by Intel, even given Intel's lead in manufacturing
+process technology.
+
+This benefit, however, comes at the cost of fragmentation. In fact, each ARM
+SoC must be regarded as an island. ARM has tried to counter this
+fragmentation by extending their offering to supplemental IP cores such as a
+generalized interrupt controller (GIC), generalized SMP support and core-local
+timers, or generalized cache management. But since these supplements are not
+mandated but rather optional, the fragmentation could not be reverted. For
+example, the Broadcom SoC as used by the Raspberry Pi 3 still employs a custom
+interrupt controller. Besides the already fragmented SoC ecosystem around
+ARM, there are SoC vendors like Qualcomm that merely use ARM's instruction
+set architecture (ISA) but use to develop a completely custom implementation
+of the CPU core. For OS vendors, this situation is unfortunate because the
+investment required for supporting one SoC family can target only a small
+fraction of the ARM device market.
+
+
+The turn-key solution debacle
+-----------------------------
+
+ARM-based mass-market products are most commonly based on open-source technology
+like the uboot boot loader and the Linux kernel. However, the operating-system
+support for ARM SoCs is generally _not_ developed as a concerted community
+effort. Instead, the development costs are carried by the respective SoC
+vendors. There are dedicated Linux kernel teams at Samsung, Qualcomm,
+Mediatek, etc. As enforced by the GPL license of the Linux kernel, the work of
+those teams is eventually published, or even integrated into the mainline
+Linux kernel. But the development process usually remains behind
+closed doors of the respective SoC vendors.
+
+This results in the following contradiction: In the perception of the public,
+ARM-based products are perceived as "open" because Linux is readily available
+for those products and the Linux-based OS can often be customized to a great
+degree. However, since the OS kernel and driver developments are pursued local
+to the SoC vendor, there is no incentive for the SoC vendor to publicly
+document the inner workings of the SoC. After all, the driver developers can
+simply call the chip designers in house when questions arise. For developers
+outside the organization, however, the operation of the SoC remains opaque.
+Often, the SoC vendor's source code is the only form of "documentation",
+which, however, is almost void of architectural clues.
+
+The prime example of this contradiction is the Raspberry Pi. On the one
+hand, it is the favorite platform for tinkerers. On the other hand, there
+exists almost no hardware documentation outside the reverse-engineering
+efforts of a community of die-hard enthusiasts.
+
+This status quo is not accidental but fostered by SoC vendors.
+_The business of SoC vendors is not solely the sale of chips but also_
+_consulting services for OEMs!_
+Here, we speak of an OEM as a company that integrates a SoC as a building
+block into a physical device. SoC vendors like Qualcomm or Mediatek provide
+their SoCs to the OEMs as so-called _turn-key_ solutions that can be
+integrated into the physical product without any know-how needed about the
+inner working of the building block.
+The building block comprises the entire stack from the chip, over the OS
+kernel, SoC-specific drivers, up to the Android user land. The holistic
+know-how of the entire stack thus remains local to the SoC vendor.
+The OEM merely has the means to customize the Android user
+experience (on top of the turn-key solution) and has all information needed to
+physically integrate the SoC on a custom board (at the bottom of the turn-key
+solution) - usually in the form of publicly available reference-board
+schematics and Gerber files. Recently, SoC vendors try to provide additional
+hooks for customization in the form of (proprietary) APIs for their respective
+trusted execution environments (TEE).
+
+However, for any customization of a turn-key solution beyond these blessed
+hooks, _the OEM ultimately depends on the consultancy business of the SoC vendor_.
+Consequently, the most prolific SoC vendors are in an extremely strong
+position and have no business incentive to weaken the exclusivity of their
+know how by publishing hardware documentation.
+
+The power dynamics of the ARM SoC market described above put independent OS
+vendors that develop alternatives to Linux into a difficult situation because
+their goals are not aligned with the SoC vendors' interests.
+From what we learned from reaching out to various OEMs, even OEMs have no real
+leverage because - at the end of the day - they are mere consumers of SoCs as
+opaque turn-key solutions with little in-house expertise about SoC-related
+OS-kernel development. The SoC's inner working is not the OEM's business.
+
+
+SoC options
+-----------
+
+For the development of an ARM-based Genode product, there exist two principle
+options.
+
+First, one may approach a SoC vendor in the role of an OEM and commission the
+SoC-specific OS development to the selected SoC vendor. This would be consistent
+with the SoC vendor's business model. That said, it seems unlikely that a small
+player would be able to present a strong-enough business case to a SoC vendor
+that normally deals with mass-market OEMs, or the costs may be prohibitive.
+Nevertheless, even if taken, this option has several downsides:
+
+# The operation of the hardware will remain opaque, which may impede
+  the trustworthiness of the device.
+# One ultimately has to enter a dependency relationship with the SoC vendor
+  regarding the system-software stack.
+# The consulting terms with the SoC vendor must be discussed with a large -
+  and from a European's perspective foreign - corporation.
+# Genode would be an entirely new territory for the SoC vendor, which bears
+  the risk of friction and high costs.
+
+As the second option, one could work with a SoC vendor that is primarily
+focused on selling chips - not turn-key solutions - and thereby has a natural
+interest to make the chips useful to a broad community of customers by
+offering documentation. Such vendors can be found in industrial and automotive
+markets that demand a high level of transparency, long-term supportability,
+and freedom for customizations.
+
+In particular NXP (formerly Freescale Semiconductor) falls into this category
+by offering an ARM SoC family (i.MX) geared towards multi-media
+products such as set-top boxes or in-car entertainment systems. The i.MX SoC
+family is also notably popular in e-book readers.
+The Genode OS framework supports i.MX since 2012. At that time, we explored
+ARM TrustZone and secure boot mechanisms and were pleasantly surprised
+about the openness of the i.MX SoC and the good state of documentation,
+which covers even NXP's custom high-assurance boot mechanism and TrustZone.
+Furthermore, NXP appears to us as an attractive partner because it is a
+European company that lives and breaths the small-business economy as present
+among, e.g., German industrial or automotive supply chains.
+
+Genode's current direction
+--------------------------
+
+With this background, we successively consolidated Genode's ARM support
+towards the i.MX family, after trying to accommodate Samsung Exynos, Texas
+Instruments OMAP, and Broadcom SoCs in the past. The i.MX family entered
+the spotlight lately with the
+[https://puri.sm/products/librem-5/ - Librem 5 project], which is a
+crowd-funded effort to manufacture a completely open-source smart phone. The
+Librem 5 project selected i.MX SoC likely for the same reasons that attracted
+us. Other notable users of the SoC family are the
+[https://inversepath.com/usbarmory - USB Armory] and the
+[https://mntre.com/reform/ - MNT reform] laptop.
+
+Granted, NXP i.MX SoCs may rightfully be criticized as not being bleeding
+edge when compared to the latest high-end smartphone chips. But from our
+perspective, this SoC family is the most attractive. Hence, when working
+on Genode's 64-bit ARM support, or device drivers, or ARM virtualization,
+we'll keep our focus on the i.MX series.
+
