@@ -1,0 +1,385 @@
+
+
+          Goa - streamlining the development of Genode applications
+
+
+The development of applications for Genode used to require a lot of learning
+about Genode's way of organizing source code, our custom build system,
+and the use of run scripts. With Goa, I introduce a new tool that aims at
+largely removing these burdens from application developers.
+
+In contrast to the tools that come with Genode, which were designed for
+developing complete systems, [https://github.com/nfeske/goa - Goa] is focused
+on the development of individual applications. In a nutshell, it streamlines
+the following tasks:
+
+# The porting of 3rd-party software to Genode, which typically involves
+  * Downloading 3rd-party source code via Git, Subversion, or in the
+    form of archives,
+  * Applying patches to the downloaded source code, and
+  * Keeping track of changes locally made to the downloaded source code.
+
+# Building software using standard build tools like CMake, alleviating
+  the need to deal with Genode's custom build system.
+  Goa takes care of automatically installing of the required Genode APIs
+  and supplying the right parameters to the build system so that Genode
+  executables are produced.
+
+# Rapidly testing the software directly on the developer's Linux host system.
+  Goa automatically downloads Genode components needed for the test
+  scenario.
+
+# Since Genode executables are binary-compatible between Linux and microkernels,
+  the same software as just tested on Linux can be deployed on top of the
+  other kernels. Goa takes care of exporting the software in the format
+  expected by Genode's package management.
+
+# Publishing (archiving and cryptographically signing) the software so that
+  it becomes available to other Genode users, in particular users of Sculpt OS.
+
+
+A first example, using a plain old Makefile
+-------------------------------------------
+
+Let's say, we want to build a hello-world application that uses the raw
+Genode API with no libc whatsoever.
+
+First, create a project directory, let's call it "hello":
+
+! mkdir hello
+! cd hello
+
+By convention, the project name corresponds to the name of the directory.
+Source codes are stored in a _src/_ sub directory. Let's create a
+file at _src/hello.cc_ with the following content:
+
+! #include <base/log.h>
+! #include <base/component.h>
+!
+! void Component::construct(Genode::Env &)
+! {
+!   Genode::log("Hello");
+! }
+
+Besides the _hello.cc_ file, let's create a _Makefile_ at _src/Makefile_ with
+the following content:
+
+! hello: hello.cc
+
+Now, let's give 'goa' a first try:
+
+! hello$ goa build
+
+This command prompts Goa to create a new directory called _var/_ within the
+project directory. The _var/_ directory is the designated place for generated
+files such as the build directory. However, upon the attempt to compile the
+program, disaster strikes:
+
+! hello.cc:1:10: fatal error: base/log.h: No such file or directory
+!  #include <base/log.h>
+!           ^~~~~~~~~~~~
+! compilation terminated.
+! make: *** [hello] Error 1
+! [test:make] <builtin>: recipe for target 'hello' failed
+! Error: build via make failed
+
+Our program tries to include a header file that is nowhere to be found.
+To resolve this problem, we can tell Goa that our project needs to use the
+Genode base API, by placing a file named _used_apis_ with the following
+content into the project directory.
+
+! nfeske/api/base
+
+This line tells Goa that our project depends on Genode's base API that
+features the _base/log.h_ and _base/component.h_ headers. When issuing
+the command 'goa build' again, we see the following message:
+
+! download nfeske/api/base/2019-11-23.tar.xz
+! download nfeske/api/base/2019-11-23.tar.xz.sig
+
+Goa automatically downloaded the base API for us and installed it into a fresh
+depot at var/depot/nfeske/api/base/2019-11-23. But not only that, it also
+re-attempted the build of the program. If we take a look at
+_var/build/x86_64/_, we see the 'hello' executable. If the output was too
+unspectacular for your taste, you may append the '--verbose' argument to the
+'goa build' command to see more details about the steps taken.
+
+To run the program, we need to tell Goa, which part of the build artifacts
+are relevant to us. In our case, it's the 'hello' executable binary. We
+can declare this information in a file called 'artifacts' with the following
+content in the project directory.
+
+! hello
+
+If we issue the 'goa build' command again, we can see that this file
+appears at _var/bin/x86_64/hello_. The content of the _bin_ directory
+is meant for the integration into a Genode scenario.
+
+Speaking of a Genode scenario, to run the program within a Genode system,
+we have to define the "contract" between the program and the surrounding
+system. This contract has the form of a runtime package. Let's create one
+with the name "hello":
+
+! hello$ mkdir -p pkg/hello
+
+A runtime package needs at least two files, a README file and a _runtime_
+file. The README file should give brief information about the purpose
+of the Genode subsystem for human readers. The runtime file contains the
+contractual information. Create a file _pkg/hello/runtime_ with the following
+content:
+
+! <runtime ram="1M" caps="100" binary="hello">
+!   <content>
+!     <rom label="hello"/>
+!   </content>
+! </runtime>
+
+Here we declare the binary we want to start, how much RAM and capabilities
+the subsystem expects and the content of the package. In this case, we
+only have a single ROM module called "hello", which is our binary.
+
+For running the scenario, we can use the 'goa run' command:
+
+! hello$ goa run
+! download nfeske/bin/x86_64/base-linux/2019-11-25.tar.xz
+! download nfeske/bin/x86_64/base-linux/2019-11-25.tar.xz.sig
+! download nfeske/bin/x86_64/init/2019-11-23.tar.xz
+! download nfeske/bin/x86_64/init/2019-11-23.tar.xz.sig
+! download nfeske/src/base-linux/2019-11-25.tar.xz
+! download nfeske/src/base-linux/2019-11-25.tar.xz.sig
+! download nfeske/src/init/2019-11-23.tar.xz
+! download nfeske/src/init/2019-11-23.tar.xz.sig
+! download nfeske/api/os/2019-11-18.tar.xz
+! download nfeske/api/os/2019-11-18.tar.xz.sig
+! download nfeske/api/report_session/2019-02-25.tar.xz
+! download nfeske/api/report_session/2019-02-25.tar.xz.sig
+! download nfeske/api/timer_session/2019-11-23.tar.xz
+! download nfeske/api/timer_session/2019-11-23.tar.xz.sig
+! Genode 19.08-191-g951271a2b2 <local changes>
+! 17592186044415 MiB RAM and 8997 caps assigned to init
+! [init -> test] Hello
+
+We can see that Goa automatically installed the dependencies needed to
+execute the runtime package, integrates a Genode scenario, and executes
+it directly on Linux. If you switch to another terminal, you can see
+the Genode processes:
+
+! $ ps a | grep Genode
+!
+! 8646 pts/3    Sl+    0:00 [Genode] init
+! 8649 pts/3    Sl+    0:00 [Genode] init -> test
+! 8650 pts/3    Sl+    0:02 [Genode] init -> timer
+
+You can cancel the execution of the Genode scenario via Control-C.
+
+
+A second example, using CMake
+-----------------------------
+
+As another step, let us create a new project that executes the 2nd step
+of the excellent [https://cmake.org/cmake-tutorial/ - CMake tutorial].
+Let's call the project "cmake_step2".
+Instead of copying the code into the _cmake_step2/src/_ directory, let us
+better tell Goa to download the code from the original tutorial. This can
+be done by creating an _import_ file in the project directory. Create the
+file _cmake_step2/import_ with the following content:
+
+! LICENSE   := BSD
+! VERSION   := master
+! DOWNLOADS := cmake_step2.svn
+!
+! URL(cmake_step2) := https://github.com/Kitware/CMake/trunk/Help/guide/tutorial/Step2
+! REV(cmake_step2) := HEAD
+! DIR(cmake_step2) := src
+
+This import file uses Github's SVN bridge to download only the specified sub
+directory of the CMake project. Let's give it a try:
+
+! cmake_step2$ goa import
+! import  download https://github.com/Kitware/CMake/trunk/Help/guide/tutorial/Step2
+! import  generate import.hash
+
+After the command finished, we find the source code sitting nicely in a new
+_src/_ directory. Let's try to build it:
+
+! cmake_step2$ goa build
+! [test:cmake] -- The C compiler identification is GNU 8.3.0
+! [test:cmake] -- The CXX compiler identification is GNU 8.3.0
+! [test:cmake] -- Check for working C compiler: /usr/local/genode/tool/19.05/bin/genode-x86-gcc
+! [test:cmake] -- Check for working C compiler: /usr/local/genode/tool/19.05/bin/genode-x86-gcc -- works
+! [test:cmake] -- Detecting C compiler ABI info
+! [test:cmake] -- Detecting C compiler ABI info - done
+! [test:cmake] -- Detecting C compile features
+! [test:cmake] -- Detecting C compile features - done
+! [test:cmake] -- Check for working CXX compiler: /usr/local/genode/tool/19.05/bin/genode-x86-g++
+! [test:cmake] -- Check for working CXX compiler: /usr/local/genode/tool/19.05/bin/genode-x86-g++ -- works
+! [test:cmake] -- Detecting CXX compiler ABI info
+! [test:cmake] -- Detecting CXX compiler ABI info - done
+! [test:cmake] -- Detecting CXX compile features
+! [test:cmake] -- Detecting CXX compile features - done
+! [test:cmake] -- Configuring done
+! [test:cmake] -- Generating done
+! [test:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
+! [test:cmake] Scanning dependencies of target Tutorial
+! [test:cmake] [ 50%] Building CXX object CMakeFiles/Tutorial.dir/tutorial.cxx.obj
+! .../cmake_step2/src/tutorial.cxx:2:10: fatal error: cmath: No such file or directory
+!  #include <cmath>
+!           ^~~~~~~
+! compilation terminated.
+
+Apparently, the example requires the standard C++ library. We can supply
+this API to the project by creating a _used_apis_ file with the following
+content:
+
+! nfeske/api/posix
+! nfeske/api/libc
+! nfeske/api/stdcxx
+! nfeske/api/base
+
+The 'posix' API is needed because - unlike a raw Genode component - the program
+starts at a 'main' function. The libc is needed as a dependency of the
+Standard C++ library.
+
+When issuing the 'goa build' command again, we see that Goa downloads the
+required APIs and successfully builds the example program:
+
+! cmake_step2$ goa build
+! download nfeske/api/base/2019-11-23.tar.xz
+! download nfeske/api/base/2019-11-23.tar.xz.sig
+! download nfeske/api/libc/2019-11-18.tar.xz
+! download nfeske/api/libc/2019-11-18.tar.xz.sig
+! download nfeske/api/posix/2019-02-25.tar.xz
+! download nfeske/api/posix/2019-02-25.tar.xz.sig
+! download nfeske/api/stdcxx/2019-11-18.tar.xz
+! download nfeske/api/stdcxx/2019-11-18.tar.xz.sig
+! [test:cmake] -- Configuring done
+! [test:cmake] -- Generating done
+! [test:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
+! [test:cmake] [ 50%] Building CXX object CMakeFiles/Tutorial.dir/tutorial.cxx.obj
+! [test:cmake] [100%] Linking CXX executable Tutorial
+! [test:cmake] [100%] Built target Tutorial
+
+The resulting executable binary can be found at _var/build/x86_64/Tutorial_.
+Let's declare it a build artifact by mentioning it a new 'artifacts' file with
+the following content.
+
+! Tutorial
+
+To run the program, we need a runtime package that is slightly more advanced
+than the first hello example. This time, we need declare that our runtime
+requires content from other depot archives in addition to our program by
+creating a file _pkg/cmake_step2/archives_ with the following content:
+
+! nfeske/src/posix
+! nfeske/src/libc
+! nfeske/src/vfs
+! nfeske/src/stdcxx
+
+This way, our sub system incorporates the shared libraries found in those
+depot archives. A suitable _pkg/cmake_step2/runtime_ for running the program
+within a Genode scenario looks like this:
+
+! <runtime ram="10M" caps="1000" binary="Tutorial">
+!
+!   <config>
+!     <libc stdout="/dev/log" stderr="/dev/log"/>
+!     <vfs>
+!       <dir name="dev">
+!         <log/>
+!       </dir>
+!     </vfs>
+!     <arg value="Tutorial"/>
+!     <arg value="24"/>
+!   </config>
+!
+!   <content>
+!     <rom label="Tutorial"/>
+!     <rom label="posix.lib.so"/>
+!     <rom label="libc.lib.so"/>
+!     <rom label="libm.lib.so"/>
+!     <rom label="stdcxx.lib.so"/>
+!     <rom label="vfs.lib.so"/>
+!   </content>
+! </runtime>
+
+Since the tutorial uses the C runtime, we have to supply a configuration
+that defines how the virtual file system of the component looks like, and
+where the program's standard output should go. We also specify the first
+and second arguments of the POSIX program as "Tutorial" (name of the program)
+and "24" its actual argument. The '<content>' lists all ROM modules required.
+
+With this runtime package in place, let's give the Tutorial a run:
+
+! cmake_step2/$ goa run
+! [test:cmake] -- Configuring done
+! [test:cmake] -- Generating done
+! [test:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
+! [test:cmake] [100%] Built target Tutorial
+! download nfeske/bin/x86_64/base-linux/2019-11-25.tar.xz
+! download nfeske/bin/x86_64/base-linux/2019-11-25.tar.xz.sig
+! download nfeske/bin/x86_64/init/2019-11-23.tar.xz
+! download nfeske/bin/x86_64/init/2019-11-23.tar.xz.sig
+! download nfeske/bin/x86_64/libc/2019-11-23.tar.xz
+! download nfeske/bin/x86_64/libc/2019-11-23.tar.xz.sig
+! download nfeske/bin/x86_64/posix/2019-11-23.tar.xz
+! download nfeske/bin/x86_64/posix/2019-11-23.tar.xz.sig
+! download nfeske/bin/x86_64/stdcxx/2019-11-18.tar.xz
+! download nfeske/bin/x86_64/stdcxx/2019-11-18.tar.xz.sig
+! download nfeske/bin/x86_64/vfs/2019-11-23.tar.xz
+! download nfeske/bin/x86_64/vfs/2019-11-23.tar.xz.sig
+! download nfeske/src/base-linux/2019-11-25.tar.xz
+! download nfeske/src/base-linux/2019-11-25.tar.xz.sig
+! download nfeske/src/init/2019-11-23.tar.xz
+! download nfeske/src/init/2019-11-23.tar.xz.sig
+! download nfeske/src/libc/2019-11-23.tar.xz
+! download nfeske/src/libc/2019-11-23.tar.xz.sig
+! download nfeske/src/posix/2019-11-23.tar.xz
+! download nfeske/src/posix/2019-11-23.tar.xz.sig
+! download nfeske/src/stdcxx/2019-11-18.tar.xz
+! download nfeske/src/stdcxx/2019-11-18.tar.xz.sig
+! download nfeske/src/vfs/2019-11-23.tar.xz
+! download nfeske/src/vfs/2019-11-23.tar.xz.sig
+! download nfeske/api/block_session/2019-05-26.tar.xz
+! download nfeske/api/block_session/2019-05-26.tar.xz.sig
+! download nfeske/api/file_system_session/2019-11-18.tar.xz
+! download nfeske/api/file_system_session/2019-11-18.tar.xz.sig
+! download nfeske/api/libc/2019-11-15.tar.xz
+! download nfeske/api/libc/2019-11-15.tar.xz.sig
+! download nfeske/api/os/2019-11-18.tar.xz
+! download nfeske/api/os/2019-11-18.tar.xz.sig
+! download nfeske/api/report_session/2019-02-25.tar.xz
+! download nfeske/api/report_session/2019-02-25.tar.xz.sig
+! download nfeske/api/rtc_session/2019-08-20.tar.xz
+! download nfeske/api/rtc_session/2019-08-20.tar.xz.sig
+! download nfeske/api/so/2019-02-25.tar.xz
+! download nfeske/api/so/2019-02-25.tar.xz.sig
+! download nfeske/api/terminal_session/2019-02-25.tar.xz
+! download nfeske/api/terminal_session/2019-02-25.tar.xz.sig
+! download nfeske/api/timer_session/2019-11-23.tar.xz
+! download nfeske/api/timer_session/2019-11-23.tar.xz.sig
+! download nfeske/api/vfs/2019-11-23.tar.xz
+! download nfeske/api/vfs/2019-11-23.tar.xz.sig
+! Genode 19.08-191-g951271a2b2 <local changes>
+! 17592186044415 MiB RAM and 8997 caps assigned to init
+! [init -> cmake_step2] The square root of 24 is 4.89898
+
+We see that Goa takes care of downloading all dependencies needed to
+host the subsystem and subsequently executes the scenario. The program
+built by the tutorial prints the result "The square root of 24 is 4.89898".
+
+
+There is more to come...
+------------------------
+
+The intro above is just a part of the scope of Goa. I'll cover further
+features - such as the publishing of Genode packages - in separate articles,
+and improve Goa on the way, i.e., by adding support for other popular build
+systems.
+
+Please also feel welcome to explore Goa on your own. A good starting point
+would be the built-in help command:
+
+! goa help
+
+If you have feedback, please don't hesitate to reach out!
+
