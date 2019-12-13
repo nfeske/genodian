@@ -1,0 +1,367 @@
+
+
+           Goa - sticking together a little Unix (part 1)
+
+
+Whereas the [http://genodians.org/nfeske/2019-11-25-goa - first article] about
+Goa was concerned with building software using commodity build systems, this
+article takes you on a ride of creating a small Unix OS out of Genode's
+ready-to-use building blocks, publishing the result, and deploying it on
+top of Sculpt OS.
+
+In the Goa introduction linked above, I already hinted at Goa's functionality
+beyond the porting and building of software. This article shows the fun and
+productive way of crafting component compositions out of Genode's readily
+available building blocks. What could be a better example than building an
+old-school operating system - Unix - that we all know and love?
+
+
+Preparations
+------------
+
+Before continuing, please make sure to have installed the Goa tool, which
+is available at [https://github.com/nfeske/goa]. If you have it installed
+already, please make sure the tool is up to date. You can issue the following
+command to update Goa to the latest version:
+
+! goa update-goa
+
+
+Hello bash
+----------
+
+As the first step, we want to get a life sign of the bash shell.
+We start with a new Goa project appropriately named 'unix' that hosts
+a runtime package but no source code.
+
+! $ mkdir unix
+! $ cd unix
+! $ mkdir -p pkg/unix
+
+Let's pretend we don't know what we are doing and create an _archives_
+file with only bash listed, and an almost empty _runtime_ file.
+
+The _pkg/unix/archives_ file:
+! nfeske/src/bash
+
+The _pkg/unix/runtime_ file:
+! <runtime ram="100M" caps="5000" binary="init">
+! </runtime>
+
+Let's see what happens when issuing the 'run' command we know from the
+previous article:
+
+! $ goa run
+! download nfeske/bin/x86_64/base-linux/2019-12-12.tar.xz
+! download nfeske/bin/x86_64/base-linux/2019-12-12.tar.xz.sig
+! download nfeske/bin/x86_64/bash/2019-11-25.tar.xz
+! download nfeske/bin/x86_64/bash/2019-11-25.tar.xz.sig
+! download nfeske/bin/x86_64/init/2019-12-12.tar.xz
+! download nfeske/bin/x86_64/init/2019-12-12.tar.xz.sig
+! download nfeske/src/base-linux/2019-12-12.tar.xz
+! download nfeske/src/base-linux/2019-12-12.tar.xz.sig
+! download nfeske/src/bash/2019-11-25.tar.xz
+! download nfeske/src/bash/2019-11-25.tar.xz.sig
+! download nfeske/src/init/2019-12-12.tar.xz
+! download nfeske/src/init/2019-12-12.tar.xz.sig
+! download nfeske/api/base/2019-11-23.tar.xz
+! download nfeske/api/base/2019-11-23.tar.xz.sig
+! download nfeske/api/base/2019-11-25.tar.xz
+! download nfeske/api/base/2019-11-25.tar.xz.sig
+! download nfeske/api/libc/2019-11-18.tar.xz
+! download nfeske/api/libc/2019-11-18.tar.xz.sig
+! download nfeske/api/noux/2019-11-18.tar.xz
+! download nfeske/api/noux/2019-11-18.tar.xz.sig
+! download nfeske/api/os/2019-12-12.tar.xz
+! download nfeske/api/os/2019-12-12.tar.xz.sig
+! download nfeske/api/posix/2019-02-25.tar.xz
+! download nfeske/api/posix/2019-02-25.tar.xz.sig
+! download nfeske/api/report_session/2019-02-25.tar.xz
+! download nfeske/api/report_session/2019-02-25.tar.xz.sig
+! download nfeske/api/timer_session/2019-11-25.tar.xz
+! download nfeske/api/timer_session/2019-11-25.tar.xz.sig
+! Error: runtime lacks a configuration
+!  
+!  You may declare a 'config' attribute in the <runtime> node, or 
+!  define a <config> node inside the <runtime> node.
+
+We can see that Goa automatically downloaded bash along with its dependencies
+such as the libc, and transitive dependencies such as Genode's base API.
+Besides the binaries, it also fetches all source codes. You can find all the
+downloads at _var/depot/_. One particularly interesting directory is the
+binary archive for bash:
+
+! $ ls var/depot/nfeske/bin/x86_64/bash/2019-11-25/
+! bash.tar
+
+It contains a single tar archive, which in turn, contains all installation
+files of bash. Let's take a look inside:
+
+! $ tar tf var/depot/nfeske/bin/x86_64/bash/2019-11-25/bash.tar
+! ./
+! ./share
+! ./share/doc
+! ...
+! ./bin/bashbug
+! ./bin/bash
+
+Of course, the most interesting bit is the 'bash' executable at _bin/bash_.
+When using the binary archive, the whole _bash.tar_ is supplemented to
+Genode as a single ROM module. Let's add it to the <content> of the
+_pkg/unix/runtime_:
+
+! <runtime ram="100M" caps="5000" binary="init">
+!   <content>
+!     <rom label="bash.tar"/>
+!   </content>
+! </runtime>
+
+After issuing 'goa run' again, you can find _bash.tar_ added to the _var/run/_
+directory, which comprises all the ROM modules of our Genode system.
+
+Of course, we cannot start a TAR archive. It is not an executable after
+all. We rather need to access the content of the archive. Here, the
+combination of three Genode components namely VFS, 'fs_rom', and init
+comes to the rescue.
+
+# The VFS server is able mount a TAR archive locally as a virtual file
+  system and offer its content as a _file-system service_.
+
+# The 'fs_rom' component provides a ROM service by fetching the content
+  of ROM modules from a file system. By connecting the 'fs_rom' with the VFS
+  component, the files of the _bash.tar_ archives become available as ROM
+  modules. With the bash executable binary accessible, we can execute it.
+
+# The init component allows us to stick components together and let the
+  result appear to the surrounding system as a single component. We can
+  use it to host the composition of the VFS, 'fs_rom', and bash.
+
+Let's start with a fresh init that hosts only the VFS server by
+placing the following <config> node inside the <runtime> node of the
+_pkg/unix/runtime_ file:
+
+! <config>
+!   <parent-provides>
+!     <service name="ROM"/>
+!     <service name="LOG"/>
+!     <service name="RM"/>
+!     <service name="CPU"/>
+!     <service name="PD"/>
+!     <service name="Timer"/>
+!   </parent-provides>
+!
+!   <start name="vfs" caps="100">
+!     <resource name="RAM" quantum="10M"/>
+!     <provides> <service name="File_system"/> </provides>
+!     <config>
+!       <vfs> <tar name="bash.tar"/> </vfs>
+!       <default-policy root="/" />
+!     </config>
+!     <route> <any-service> <parent/> </any-service> </route>
+!   </start>
+!
+! </config>
+
+The <default-policy> expresses that any client should be able to access
+the root of the virtual file system in a read-only fashion.
+
+When trying to 'run' the scenario now, we see a bunch of error messages:
+
+! $ goa run
+! Genode 19.11-49-g11ba8b18fa <local changes>
+! 17592186044415 MiB RAM and 8997 caps assigned to init
+! [init -> unix] Error: vfs: environment ROM session denied ...
+
+The messages tell us that init requested the ROM module 'vfs' that is not
+available to the scenario, yet. To make it available, we have to
+declare it in the _archives_ and as <content> in the _runtime_ file.
+Let's add the following line to _pkg/unix/archive_:
+
+! nfeske/src/vfs
+
+Also make sure to have the ROM module listed as <content> in the
+_pkg/unix/runtime_ so that it looks as follows:
+
+! <content>
+!   <rom label="bash.tar"/>
+!   <rom label="vfs"/>
+! </content>
+
+When issuing 'goa run' again, we can see Goa downloading the additional
+components. On the attempt to start the scenario, we are confronted with
+another error message:
+
+! [init -> unix -> vfs] Error: Could not open ROM session for "vfs.lib.so"
+
+This message tells us that the VFS server requests another ROM module, which
+is a shared library. The _vfs.lib.so_ contains the actual implementation
+of the virtual file system. It comes in the form of a library to enable its
+use either locally by an individual application or via the VFS server. The
+library is part of the 'nfeske/src/vfs' archive that is already listed in our
+_archives_ file. So we can resolve this error by adding a corresponding <rom>
+entry to the _runtime_ file. The <content> should now look as follows:
+
+! <content>
+!   <rom label="bash.tar"/>
+!   <rom label="vfs"/>
+!   <rom label="vfs.lib.so"/>
+! </content>
+
+When running the scenario again, we see a sign of hope:
+
+! goa run
+! Genode 19.11-49-g11ba8b18fa <local changes>
+! 17592186044415 MiB RAM and 8997 caps assigned to init
+! [init -> unix -> vfs] tar archive 'bash.tar' local at ...
+
+Yes! The VFS server is running and has successfully mounted the _bash.tar_
+archive.
+
+The second piece of the puzzle is the 'fs_rom' server, which can be added
+to the <config> node with the following snippet:
+
+! <start name="vfs_rom" caps="100">
+!   <resource name="RAM" quantum="10M"/>
+!   <binary name="fs_rom"/>
+!   <provides> <service name="ROM"/> </provides>
+!   <config/>
+!   <route>
+!     <service name="File_system"> <child name="vfs"/> </service>
+!     <any-service> <parent/> </any-service>
+!   </route>
+! </start>
+
+By using the <binary> node, we can label the component in a meaningful
+way, calling it "vfs_rom". The first entry of the <route> node defines that
+the request for a file-system session should be routed to the "vfs" component.
+
+On the next attempt to issue 'goa run', we face an error message:
+
+! [init -> unix] Error: vfs_rom: environment ROM session denied
+
+By now, I'm sure you know how to resolve this one. Corresponding entries
+to your _archives_ file and the _runtime_ file's <content> are added swiftly.
+The fs_rom component gives us no life sign, which is normal. If you want to
+get a little bit more action on screen, you may add the 'verbose="yes"'
+attribute to init's <config> node. Another try of 'goa run' reveals the
+following output.
+
+! $ goa run
+! Genode 19.11-49-g11ba8b18fa <local changes>
+! 17592186044415 MiB RAM and 8997 caps assigned to init
+! [init -> unix] parent provides
+! [init -> unix]   service "ROM"
+! [init -> unix]   service "LOG"
+! [init -> unix]   service "RM"
+! [init -> unix]   service "CPU"
+! [init -> unix]   service "PD"
+! [init -> unix]   service "Timer"
+! [init -> unix] child "vfs"
+! [init -> unix]   RAM quota:  9992K
+! [init -> unix]   cap quota:  68
+! [init -> unix]   ELF binary: vfs
+! [init -> unix]   priority:   0
+! [init -> unix]   provides service File_system
+! [init -> unix] child "vfs_rom"
+! [init -> unix]   RAM quota:  9992K
+! [init -> unix]   cap quota:  68
+! [init -> unix]   ELF binary: fs_rom
+! [init -> unix]   priority:   0
+! [init -> unix]   provides service ROM
+! [init -> unix -> vfs] tar archive 'bash.tar' local at ...
+! [init -> unix] child "vfs" announces service "File_system"
+! [init -> unix] child "vfs_rom" announces service "ROM"
+
+That looks promising. Now with the bash executable available as ROM module,
+let's give the bash shell a spin:
+
+! <start name="/bin/bash" caps="1000">
+!   <resource name="RAM" quantum="10M" />
+!   <config>
+!     <vfs>
+!       <dir name="dev"> <null/> <log/> </dir>
+!     </vfs>
+!     <libc stdin="/dev/null" stdout="/dev/log" stderr="/dev/log"
+!           rtc="/dev/null"/>
+!     <arg value="bash"/>
+!     <arg value="-c"/>
+!     <arg value="echo files at /dev: /dev/*"/>
+!   </config>
+!   <route>
+!     <service name="ROM" label_last="/bin/bash">
+!       <child name="vfs_rom"/> </service>
+!     <any-service> <parent/> </any-service>
+!   </route>
+! </start>
+
+The following parts are worth highlighting:
+
+* The bash has its own VFS! This has nothing to do with the VFS server
+  we started above. In fact, bash's VFS - as configured by the <vfs>
+  node - merely contains the two pseudo files _/dev/null_ and _/dev/log_.
+  The latter one is a LOG connection that enables the bash to write
+  messages to the outside world.
+
+* The <libc> node contains the configuration of the C runtime used by bash.
+  Here we say how the standard output should go, or that the C runtime
+  should obtain its "real-time-clock" information from _/dev/null_. No
+  time for you this time!
+
+* Via the sequence of <arg> nodes, we execute the command
+  ! echo files at /dev: /dev/*
+  It uses the shell's file globbing mechanism to obtain the list of files
+  matching the pattern "/dev/*" and prints it via the 'echo' built-in command.
+
+* The <route> rules explicitly tell init that the binary of the component
+  should be obtained from the "vfs_rom" component.
+
+When trying to 'goa run' the scenario now, we have to add a few more entries
+to our _archives_ and <content>, specifically because bash uses the C runtime
+(libc and libc) as well as the posix library. The full list of _archives_
+now looks as follows:
+
+! nfeske/src/bash
+! nfeske/src/vfs
+! nfeske/src/fs_rom
+! nfeske/src/libc
+! nfeske/src/posix
+
+For reference, the <rom> modules listed in the _runtime_ file's <content>
+node:
+
+! <content>
+!   <rom label="bash.tar"/>
+!   <rom label="vfs"/>
+!   <rom label="vfs.lib.so"/>
+!   <rom label="fs_rom"/>
+!   <rom label="libc.lib.so"/>
+!   <rom label="libm.lib.so"/>
+!   <rom label="posix.lib.so"/>
+! </content>
+
+Once these stumbling blocks are out of the way, 'goa run' greets us with the
+following output:
+
+! ...
+! [init -> unix] Warning: /bin/bash: incomplete environment ROM session (/bin/bash)
+! [init -> unix -> vfs] tar archive 'bash.tar' local at ...
+! [init -> unix] child "vfs" announces service "File_system"
+! [init -> unix] child "vfs_rom" announces service "ROM"
+! [init -> unix -> /bin/bash] files at /dev: /dev/log /dev/null
+! [init -> unix] child "/bin/bash" exited with exit value 0
+
+The warning about the "incomplete environment ROM session" is nothing to
+worry about. It stems from the fact that init is not able to obtain the
+ROM module of bash's executable right away since the ROM is provided by
+a service that was just started by init.
+
+The message "files at /dev: /dev/log /dev/null"
+is the output of bash command we have hoped for!
+
+
+Outlook
+-------
+
+Granted, our scenario is still a far cry from being a Unix system. In the next
+episode, we will add an interactive terminal. Stay tuned!
+
