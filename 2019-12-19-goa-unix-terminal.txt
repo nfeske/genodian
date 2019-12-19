@@ -1,0 +1,406 @@
+
+
+           Goa - sticking together a little Unix (part 2)
+
+
+Let us transcend the simplistic bash scenario created in
+[https://genodians.org/nfeske/2019-12-13-goa-unix-bash - part 1] and enter
+the stage of an interactive system.
+
+
+Some reorg is in order
+----------------------
+
+The scenario we built in the first part was quite small. For such small
+scenarios, defining the <config> node right in the _runtime_ file is quite
+handy. Once the subsystem becomes bigger, however, its better to move
+the <config> into a dedicated ROM module. Let us create a new directory
+named _raw/_ inside the project directory, and move the <config> node from
+the _runtime_ file to a new file _raw/unix.config_. Goa will pick up all files
+contained in the _raw/_ directory and supply them as ROM modules to the Genode
+scenario.
+
+Since there is no longer a <config> provided in the _runtime_ file, we tell
+the runtime to use the "unix.config" as configuration by changing the <runtime>
+node as follows:
+
+! <runtime ram="100M" caps="5000" binary="init" config="unix.config">
+
+Since _unix.config_ is expected to be present as a ROM module, we have
+to declare via a <rom> node in the _runtime_ file.
+
+For reference, the _pkg/unix/runtime_ file should now look as follows:
+
+! <runtime ram="100M" caps="5000" binary="init" config="unix.config">
+!
+!   <content>
+!     <rom label="bash.tar"/>
+!     <rom label="vfs"/>
+!     <rom label="vfs.lib.so"/>
+!     <rom label="fs_rom"/>
+!     <rom label="libc.lib.so"/>
+!     <rom label="libm.lib.so"/>
+!     <rom label="posix.lib.so"/>
+!     <rom label="unix.config"/>
+!   </content>
+!
+! </runtime>
+
+The _raw/unix.config_ file:
+
+! <config verbose="yes">
+!
+!   <parent-provides>
+!     <service name="ROM"/>
+!     <service name="LOG"/>
+!     <service name="RM"/>
+!     <service name="CPU"/>
+!     <service name="PD"/>
+!     <service name="Timer"/>
+!   </parent-provides>
+!
+!   <start name="vfs" caps="100">
+!     <resource name="RAM" quantum="10M"/>
+!     <provides> <service name="File_system"/> </provides>
+!     <config>
+!       <vfs> <tar name="bash.tar"/> </vfs>
+!       <default-policy root="/" />
+!     </config>
+!     <route> <any-service> <parent/> </any-service> </route>
+!   </start>
+!
+!   <start name="vfs_rom" caps="100">
+!     <resource name="RAM" quantum="10M"/>
+!     <binary name="fs_rom"/>
+!     <provides> <service name="ROM"/> </provides>
+!     <config/>
+!     <route>
+!       <service name="File_system"> <child name="vfs"/> </service>
+!       <any-service> <parent/> </any-service>
+!     </route>
+!   </start>
+!
+!   <start name="/bin/bash" caps="1000">
+!     <resource name="RAM" quantum="10M" />
+!     <config>
+!       <libc stdin="/dev/null" stdout="/dev/log" stderr="/dev/log"
+!             rtc="/dev/null"/>
+!       <vfs>
+!         <dir name="dev"> <null/> <log/> </dir>
+!       </vfs>
+!       <arg value="bash"/>
+!       <arg value="-c"/>
+!       <arg value="echo files at /dev: /dev/*"/>
+!     </config>
+!     <route>
+!       <service name="ROM" label_last="/bin/bash">
+!         <child name="vfs_rom"/> </service>
+!       <any-service> <parent/> </any-service>
+!     </route>
+!   </start>
+!
+! </config>
+
+This reorganization has two advantages. First, we save one indentation
+level for the <config> node. Second, by separating the _unix.config_ from
+the _runtime_ in the form of a dedicated ROM module, we can later reuse
+the same ROM module for other _runtime_ files. It is always good to have
+reusable building blocks.
+
+Let's give the new version a try by issuing 'goa run'. The output should
+look familiar to us.
+
+
+GUI stack
+---------
+
+Goa supports interactive system scenarios by looking at the requirements
+stated in the _runtime_ file. Right now, the runtime file merely states
+the amount of RAM and caps as a requirement. We can add the presence of
+a GUI service as an additional requirement by adding the following
+node inside the <runtime> node:
+
+! <requires>
+!   <nitpicker/>
+!   <timer/>
+! </requires>
+
+When Goa processes the 'goa run' command, it evaluates this information.
+The <nitpicker> node tells Goa that the scenario will request a so-called
+"Nitpicker" session to a GUI server. When running the scenario on Linux,
+Goa will automatically integrate the components needed for such a GUI server.
+This includes a pseudo graphics driver, a pseudo input driver, and the
+[https://github.com/genodelabs/genode/tree/master/repos/os/src/server/nitpicker - nitpicker GUI server].
+
+Let's try 'goa run' after having added the <requires> definition to our
+_runtime_. We can see that Goa automatically downloads the basic components of
+the GUI stack. Not only that. When starting the scenario, a new window
+with a greenish background pops up. When hovering the mouse over the window,
+you can see a small mouse pointer. If you are curious how the system the
+GUI stack is assembled in detail, please have a look at _var/run/config_.
+But from the perspective of our Unix scenario, these exact details are not
+of interest. The only important point is that our scenario is now officially
+able to request a "Nitpicker" and "Timer" service from the underlying
+system.
+
+With these preconditions in place, we can start a graphical terminal
+in our _unix.config_ by adding the following two <start> nodes:
+
+! <start name="nit_fb" caps="110">
+!   <resource name="RAM" quantum="2M"/>
+!   <provides>
+!      <service name="Framebuffer"/>
+!      <service name="Input"/>
+!   </provides>
+!   <config/>
+!   <route> <any-service> <parent/> </any-service> </route>
+! </start>
+!
+! <start name="terminal" caps="110">
+!   <resource name="RAM" quantum="2M"/>
+!   <provides> <service name="Terminal"/> </provides>
+!   <route>
+!     <service name="ROM" label="config">
+!       <parent label="terminal.config"/> </service>
+!     <service name="Framebuffer"> <child name="nit_fb"/> </service>
+!     <service name="Input">       <child name="nit_fb"/> </service>
+!     <any-service> <parent/> </any-service>
+!   </route>
+! </start>
+
+The "nit_fb" component is an adapter. It requests a nitpicker session (routed
+to the parent) and, in turn, provides the low-level "Input" and "Framebuffer"
+services. The
+[https://github.com/genodelabs/genode/tree/master/repos/gems/src/server/terminal - "terminal"]
+uses these services to create a graphical terminal and provides the textual
+input and output in the form of a "Terminal" service. In the routing rules of
+the terminal, you can see that the terminal's configuration is fetched from a
+dedicated ROM module called "terminal.config". We have no such ROM module
+defined yet. However, let's still give it try:
+
+! [init -> unix] Error: terminal: environment ROM session denied (label="terminal" ...)
+! ...
+! [init -> unix] Error: nit_fb: environment ROM session denied (label="nit_fb" ...)
+
+That's not surprising as we have neither added 'nit_fb' and 'terminal' to our
+_archives_ nor have we stated the <rom> modules in the runtime file's <content>.
+Let's do this now. While we are at it, let's also add a <rom> node for the
+"terminal.config" ROM.
+
+The following two lines must be added to _pkg/unix/archives_
+
+! nfeske/src/nit_fb
+! nfeske/src/terminal
+
+The following three lines must be added to the runtime file's <content>:
+
+! <content>
+!   ...
+!   <rom label="nit_fb"/>
+!   <rom label="terminal"/>
+!   <rom label="terminal.config"/>
+! </content>
+
+When trying 'goa run' again, we see that we exchanged the previous errors
+with two new ones. Let's call it progress:
+
+! [init -> unix -> terminal] Error: Could not open ROM session for "config"
+! ...
+! [init -> unix] Warning: nit_fb: no route to service "Nitpicker"
+
+The first error is easy to explain. We have configured the "terminal"
+start node to fetch its configuration from a ROM called _terminal.config_
+but have not defined the ROM module so far. Let's add a new file
+_raw/terminal.config_ with an empty <config> node:
+
+! <config/>
+
+The second error tells us that there is no way for "nit_fb" to reach a
+"Nitpicker" service. Let's take a look at the <route> rules for this
+component:
+
+! <route> <any-service> <parent/> </any-service> </route>
+
+This rule says that all service requests should directly go towards the
+surrounding Genode system, towards the parent of the component tree.
+However, in the <parent-provides> declaration at the beginning of the
+init <config> a "Nitpicker" service is nowhere to be found. Hence, init
+refuses to ask the outside world for a "Nitpicker" service on behalf of
+its child nit_fb. Let us enhance the <parent-provides> node with an entry
+for the nitpicker service:
+
+! <parent-provides>
+!   ...
+!   <service name="Nitpicker"/>
+! </parent-provides>
+
+Now, when trying 'goa run' for the next time, we see that something has
+changed. The formerly greenish background of the graphical window has
+turned black. Good news! The black is the default background color of
+the terminal. However, as so often, the good news are accompanied with
+less good news, as seen in the log:
+
+! [init -> unix -> terminal] Error: Uncaught exception of type
+!                            'Genode::Xml_node::Nonexistent_sub_node'
+! [init -> unix -> terminal] Warning: abort called - thread: ep
+
+Well, the terminal seems underwhelmed by us serving an empty <config/> as
+configuration. It is time to become more specific. Let's change the
+content of the _raw/terminal.config_ to something meaningful:
+
+! <config>
+!   <vfs>
+!     <rom name="VeraMono.ttf"/>
+!     <dir name="fonts">
+!       <dir name="monospace">
+!         <ttf name="regular" path="/VeraMono.ttf" size_px="16"/>
+!       </dir>
+!     </dir>
+!   </vfs>
+! </config>
+
+Wait a minute. How is this a terminal configuration?
+
+The terminal expects its font to be found at its local VFS at
+_/fonts/monospace_. The font has the form of a pseudo file system that
+provides the pixel data of the glyphs along with the font meta data as a bunch
+of pseudo files. So here, we mount a TrueType font with the 'ttf' file-system
+driver at _/fonts/monospace_. The font file is specified as 'path' attribute,
+which refers to "/VeraMono.ttf". This file, in turn, is backed by a <rom>
+session that requests the ROM module named "VeraMono.ttf".
+
+With this configuration in place, the next attempt of 'goa run' yields a
+quite predictable result:
+
+! [init -> unix -> terminal] Error: ROM-session creation failed (...)
+! [init -> unix -> terminal] Error: Could not open ROM session for "VeraMono.ttf"
+! [init -> unix -> terminal] Error: failed to create <rom> VFS node
+! [init -> unix -> terminal] Error:     name="VeraMono.ttf"
+! [init -> unix -> terminal] Error: ROM-session creation failed (...)
+! [init -> unix -> terminal] Error: Could not open ROM session for "vfs_ttf.lib.so"
+! [init -> unix -> terminal] Error: failed to create <ttf> VFS node
+! [init -> unix -> terminal] Error:     name="regular"
+! [init -> unix -> terminal] Error:     path="/VeraMono.ttf"
+! [init -> unix -> terminal] Error:     size_px="16"
+
+The terminal configuration referred to two ROM modules that we haven't yet
+included into the scenario. The "VeraMono.ttf" is the TrueType font data we
+tried to mount as <rom> node. The "vfs_ttf.lib.so" is the driver for the "ttf"
+pseudo file system. It is requested by the VFS when the <ttf> is encountered.
+The errors can be resolved by extending the _archives_ file and the _runtime_
+file's <content> node accordingly.
+
+The following lines must be added to _pkg/unix/archives_
+
+! nfeske/raw/ttf-bitstream-vera-minimal
+! nfeske/src/vfs_ttf
+
+The following lines must be added to the <content> node in _pkg/unix/runtime_
+
+! <content>
+!   ...
+!   <rom label="VeraMono.ttf"/>
+!   <rom label="vfs_ttf.lib.so"/>
+! </content>
+
+After these modifications, the next try of 'goa run' works without any error.
+We see the black screen and the log output of '/bin/bash' looks as usual.
+
+
+Connecting bash with the terminal
+---------------------------------
+
+With the current scenario, bash and the GUI stack are running peacefully
+side by side but they do not interact with each other. To connect them,
+we will do the following:
+
+# Mount a terminal session to the VFS of the VFS server at /dev/terminal.
+
+  This can be done by changing the content of the <start> node of the
+  VFS server. As a reminder, this is how it looks so far:
+
+  ! <config>
+  !   <vfs> <tar name="bash.tar"/> </vfs>
+  !   <default-policy root="/" />
+  ! </config>
+  ! <route> <any-service> <parent/> </any-service> </route>
+
+  We change it to the following:
+
+  ! <config>
+  !   <vfs>
+  !     <tar name="bash.tar"/>
+  !     <dir name="dev"> <terminal/> </dir>
+  !   </vfs>
+  !   <default-policy root="/" />
+  !   <policy label_prefix="/bin/bash" root="/" writeable="yes" />
+  ! </config>
+  ! <route>
+  !   <service name="Terminal"> <child name="terminal"/> </service>
+  !   <any-service> <parent/> </any-service>
+  ! </route>
+
+  The <vfs> node gained the configuration of _/dev/terminal_. When the
+  VFS encounters the <terminal> node upon initialization, it will request
+  a session to a "Terminal" service.
+  The added route tells init to route the terminal session
+  towards the "terminal" component.
+  The added <policy> node defines that a file-system client labeled as
+  "/bin/bash" is allowed to access the entirety of the VFS in a writeable
+  fashion.
+
+# Mount the file system as provided by the VFS server into the VFS of the
+  bash shell. This way, all files provided by the VFS server become
+  visible in the file name space of bash. This can be done by extending
+  the <vfs> of bash by adding an <fs/> node:
+
+  ! <vfs>
+  !   <dir name="dev"> <null/> <log/> </dir>
+  !   <fs/>
+  ! </vfs>
+
+  When the VFS of bash encounters the <fs/> node, it will request a session
+  to a "File_system" service. To let this request reach the VFS server,
+  we have to add a new entry to the <route> definition.
+
+  ! <route>
+  !   <service name="File_system"> <child name="vfs"/> </service>
+  !   ...
+  ! </route>
+
+To have a visible effect, let's redirect the output of the "echo" command
+executed by bash to the pseudo file _/dev/terminal_. Change the bash
+argument to the following (just appending the "> /dev/terminal"):
+
+! <arg value="echo files at /dev: /dev/* > /dev/terminal"/>
+
+Upon the next attempt of 'goa run', magic happens:
+
+[image goa_bash_terminal]
+
+We have just redirected the output of the bash command to our terminal, which
+used our TrueType pseudo-file-system driver to render glyphs on a pixel buffer
+that, in turn, was blitted by the nitpicker GUI server to screen. Could our
+day become any better? Sure! How about interacting with bash directly?
+
+Change the <libc> configuration of bash to the following:
+
+! <libc stdin="/dev/terminal" stdout="/dev/terminal" stderr="/dev/terminal"
+!       rtc="/dev/null"/>
+
+This change wires up the standard input and output of bash with
+_/dev/terminal_. Let's also drop the '-c' arguments from the bash <config> so
+that bash will wait for a command typed in via stdin. The next 'goa run'
+will greet us with a shell prompt where we can type in bash commands like
+echo:
+
+[image goa_bash_interactive]
+
+Of course, we feel a sudden urge to also execute the 'ls' command.
+
+[image goa_ls_command_not_found]
+
+The 'ls' command is a separate Unix command that is not yet part of our
+scenario. It will be covered by the next episode. Until then, I wish
+you hours of fun with bash's builtin commands!
+

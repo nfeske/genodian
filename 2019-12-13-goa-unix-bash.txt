@@ -358,10 +358,8 @@ a service that was just started by init.
 The message "files at /dev: /dev/log /dev/null"
 is the output of bash command we have hoped for!
 
+Granted, our scenario is still a far cry from being a Unix system.
+In the next episode, we will add an interactive terminal.
+[https://genodians.org/nfeske/2019-12-19-goa-unix-terminal - Read on...]
 
-Outlook
--------
-
-Granted, our scenario is still a far cry from being a Unix system. In the next
-episode, we will add an interactive terminal. Stay tuned!
 
