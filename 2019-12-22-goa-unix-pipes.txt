@@ -1,0 +1,303 @@
+
+           Goa - sticking together a little Unix (part 3)
+
+
+In the [https:2019-12-19-goa-unix-terminal - previous article],
+we went from a first life sign of the bash shell to an interactive
+scenario. Today, we spice up our little system with the magic potion of Unix,
+namely the presence of a collection of useful utilities and a mechanism to
+combine them. If someone asked me for one word condensing the essence of Unix,
+it would be "pipe". Off we go, plumbing!
+
+
+Adding GNU coreutils
+--------------------
+
+The fun with our interactive bash shell at the end of the previous article
+came to a full stop once we tried the 'ls' command. The command - along with
+most others we commonly associate with Unix - are actually little programs
+that are spawned by the shell each time when used. When typing 'ls', bash
+doesn't actually know the purpose of 'ls'. It merely looks up a program named
+'ls' and executes it. The program 'ls', in turn, has the single purpose
+of printing directory contents. When executed, it takes a look at the file
+system, prints the gathered information, and exits. The 'ls' command together
+with its friends 'cp', 'mkdir', 'sort', and many others are the Unix core
+utilities. On a regular GNU/Linux system, they are provided by the
+[https://www.gnu.org/software/coreutils/coreutils.html - GNU coreutils]
+package.
+
+The GNU coreutils package is readily available for Genode. We can add it
+by appending the following line to our _pkg/unix/archives_ file:
+
+! nfeske/src/coreutils
+
+After adding this line, the next invocation of 'goa run' will download
+the source code along with a ready-to-use binaries to _var/depot/_.
+In particular, you can find the binary at
+_var/depot/nfeske/bin/x86_64/coreutils/<version>/_.
+Analogous to the bash package, described in the
+[https:2019-12-13-goa-unix-bash - first article],
+there is a single TAR archive containing all the files that comprise the
+coreutils installation.
+
+! $ tar tf var/depot/nfeske/bin/x86_64/coreutils/2019-11-18/coreutils.tar
+! ./
+! ./lib/
+! ...
+! ./share/
+! ...
+! ./bin/
+! ./bin/uname
+! ./bin/groups
+! ./bin/dircolors
+! ./bin/chcon
+! ./bin/nproc
+! ./bin/true
+! ./bin/mv
+! ...
+
+We follow the same pattern as previously used for integrating the _bash.tar_
+archive.
+
+# Declaring the use of 'coreutils.tar' as ROM module in the _pkg/unix/runtime_
+  file's <content> node:
+
+  ! <content>
+  !   ...
+  !   <rom label="coreutils.tar"/>
+  ! </content>
+
+# Mounting the 'coreutils.tar' as file system into the VFS of the VFS server.
+  The VFS server's <vfs> should now look as follows:
+
+  ! <vfs>
+  !   <tar name="bash.tar"/>
+  !   <tar name="coreutils.tar"/>
+  !   <dir name="dev"> <terminal/> </dir>
+  ! </vfs>
+
+  As you can see, the VFS supports the mounting any number of file systems
+  side by side as overlays, which is commonly known as
+  [https://en.wikipedia.org/wiki/Union_mount - union mounting].
+
+Remember from the end of the previous article that our attempt to issue
+'ls' resulted in the following message:
+
+[image goa_ls_command_not_found]
+
+Let's give 'goa run' another go now.
+
+[image goa_ls_no_such_file]
+
+Unlike before, bash has actually found the 'ls' binary on the file system. We
+mounted 'coreutils.tar' into the VFS after all, which you can easily reaffirm
+via 'cd bin; echo *'. However, bash still failed to spawn the 'ls' program.
+Genode's log output reveals why:
+
+! [init -> unix -> /bin/bash -> 1] Error: Could not open ROM session for "/bin/ls"
+! [init -> unix -> /bin/bash -> 1] Warning: execve: executable binary inaccessible as ROM module
+
+Remember from the [https:2019-12-13-goa-unix-bash - first article]
+that we have to make a program's binary available as ROM module in order to
+execute it. We have accomplished this via the 'fs_rom' server handing out
+file-system content as ROM modules, and directing bash's request for the
+"/bin/bash" ROM module to 'fs_rom'. To recap, we defined the <route> rules for
+'bash' as follows:
+
+! <route>
+!   <service name="File_system"> <child name="vfs"/> </service>
+!   <service name="ROM" label_last="/bin/bash">
+!     <child name="vfs_rom"/> </service>
+!   <any-service> <parent/> </any-service>
+! </route>
+
+There is no valid route for a ROM service and the label "/bin/ls" yet.
+In principle, we could follow the pattern of the "/bin/bash" ROM.
+On the other hand, with many binaries installed at _/bin/_, the approach
+would become cumbersome. A better solution is adding a route that matches
+the label prefix "/bin". Changing the <route> of "/bin/bash" as follows
+does the trick (pay attention to the third <service> node).
+
+! <route>
+!   <service name="File_system"> <child name="vfs"/> </service>
+!   <service name="ROM" label_last="/bin/bash">
+!     <child name="vfs_rom"/> </service>
+!   <service name="ROM" label_prefix="/bin">
+!     <child name="vfs_rom"/> </service>
+!   <any-service> <parent/> <any-child/> </any-service>
+! </route>
+
+The next try of 'goa run' yields the following result:
+
+[image goa_ls_working]
+
+A look at _/bin/_ reveals the wealth of commands that have just become
+available at our finger tips.
+
+[image goa_ls_bin]
+
+
+Plumbing pipes
+--------------
+
+Let us try to count'em via the 'wc -l' command ('wc -l' counts the number of
+lines).
+
+[image goa_pipe_error]
+
+With our attempt of using a pipe, feeding the output of 'ls -1' via the '|'
+symbol as input into 'wc -l', we seem to hit another brick wall.
+But that one isn't too bad. Until now, we haven't yet configured the
+C runtime of "/bin/bash" (and its child processes) for the use of a pipe
+mechanism. We can do so by adding a 'pipe' attribute to the <libc> node:
+
+! <libc stdin="/dev/terminal" stdout="/dev/terminal" stderr="/dev/terminal"
+!       rtc="/dev/null" pipe="/dev/pipe"/>
+
+But _/dev/pipe_ does not exist, you ask! Thanks for paying attention.
+On traditional Unix systems, the pipe mechanism is provided by the kernel.
+On Genode, we provide it via a pseudo file system that is shared by both
+ends of the pipe. The path _/dev/pipe/_ is the location of this pseudo
+file system. To make it easily available to all Unix processes, we have
+to mount it into the VFS of the VFS server. As a reminder, the <vfs> of the
+VFS server currently looks as follows.
+
+! <vfs>
+!   <tar name="bash.tar"/>
+!   <tar name="coreutils.tar"/>
+!   <dir name="dev"> <terminal/> </dir>
+! </vfs>
+
+With the addition of the pipe pseudo file system, we change the
+'<dir name="dev">' node into this:
+
+! <dir name="dev">
+!   <terminal/>
+!   <dir name="pipe"> <pipe/> </dir>
+! </dir>
+
+As usual after making such changes, the repeated use of 'goa run' guides us
+forward:
+
+! [init -> unix -> vfs] Error: Could not open ROM session for "vfs_pipe.lib.so"
+! [init -> unix -> vfs] Error: failed to create <pipe> VFS node
+
+I'm sure, you guess what comes next. Let's enhance _pkg/unix/archives_ with
+the following line:
+
+! nfeske/src/vfs_pipe
+
+Also declare the "vfs_pipe.lib.so" ROM in our _pkg/unix/runtime_ file:
+
+! <content>
+!   ...
+!   <rom label="vfs_pipe.lib.so"/>
+! </content>
+
+With these minor tweaks in place, 'goa run' starts up successfully again.
+This time, our attempt to combine 'ls' with 'wc' works as intended!
+
+[image goa_ls_wc]
+
+
+Life is not complete without Vim
+--------------------------------
+
+To wrap up the Unix experience, let's add the Vim text editor to the scenario.
+The process is rather straight forward and follows exactly the pattern of the
+addition of coreutils. That is
+
+# Add vim to _pkg/unix/archives_
+
+  ! nfeske/src/vim
+
+# Add the "vim.tar: ROM to _pkg/unix/runtime_
+
+  ! <rom label="vim.tar"/>
+
+# Mount "vim.tar" at the VFS server
+
+  ! <tar name="vim.tar"/>
+
+Another try of 'goa run' downloads the needed depot content and starts the
+scenario. The attempt to start 'vim' results in an error message in the
+Genode log:
+
+! [init -> unix -> /bin/bash -> 1] Error: Could not open ROM session for "ncurses.lib.so"
+
+Vim is the first Unix program that requires
+[https://en.wikipedia.org/wiki/Ncurses - ncurses], which is a library for
+interactive terminal applications. To make it available to our system,
+add 'nfeske/src/ncurses' to _pkg/unix/archives_ and
+'<rom label="ncurses.lib.so"/>' to _pkg/unix/runtime_.
+
+The next test run looks much better. Vim starts up successfully but is not
+entirely happy:
+
+[image goa_vim_no_tmp]
+
+Vim relies on the presence of a _/tmp/_ directory. We can satisfy it by
+mounting a memory-backed <ram/> file system in our VFS server by adding
+the following line to its <vfs> configuration:
+
+! <dir name="tmp"> <ram/> </dir>
+
+Upon the next test run, we are greeted with another error message:
+
+[image goa_vim_no_sh]
+
+For some tasks like file globbing, Vim spawns a shell as child process and
+expects the shell being available as _/bin/sh_. This default can be overridden
+via the 'SHELL' environment variable. We can set the 'SHELL' environment
+variable to the value "bash" by adding the following line to <config> of the
+"/bin/bash" <start> node:
+
+! <env key="SHELL" value="bash"/>
+
+Furthermore, we can tame Vim by overriding its default configuration.
+
+Create a file _raw/vimrc_ with the following content:
+!set noloadplugins
+!set hls
+!set nocompatible
+!set laststatus=2
+!set noswapfile
+!set viminfo=
+
+Add a <rom label="vimrc"/> node to the <content> of _pkg/unix/runtime_.
+
+Mount the "vimrc" ROM as _/share/vim/vimrc_ file at the VFS server:
+
+! <dir name="share"> <dir name="vim"> <rom name="vimrc"/> </dir> </dir>
+
+Finally, we can make ncurses aware of the actual terminal protocol implemented
+by Genode's graphical terminal by setting the environment variable 'TERM'.
+This enables the use of colors in Vim. Add the following line to the <config>
+of the "/bin/bash" <start> node:
+
+! <env key="TERM" value="screen"/>
+
+With these changes, we are greeted with the following screen when starting
+'vim' from the bash shell in our little Unix environment:
+
+[image goa_vim_working]
+
+We have just crafted a little Unix out of Genode's generic building blocks.
+The result allows us to work with the time-tested an loved Unix core
+utilities, combine them with pipes, and edit files with the full
+comfort of Vim. All that has become possible with less than 150 lines of XML:
+
+! $ wc -l raw/unix.config raw/terminal.config pkg/unix/runtime
+!   88 raw/unix.config
+!   10 raw/terminal.config
+!   29 pkg/unix/runtime
+!  127 total
+
+
+Outlook
+-------
+
+In the next episode, we will see how to publish the result as a Genode
+package, ready to be deployed on Sculpt OS.
+
+

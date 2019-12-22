@@ -401,6 +401,4 @@ Of course, we feel a sudden urge to also execute the 'ls' command.
 [image goa_ls_command_not_found]
 
 The 'ls' command is a separate Unix command that is not yet part of our
-scenario. It will be covered by the next episode. Until then, I wish
-you hours of fun with bash's builtin commands!
-
+scenario. It is covered by the [https:2019-12-22-goa-unix-pipes - next episode...]
