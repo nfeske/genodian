@@ -1,0 +1,145 @@
+
+
+             Pending Sculpt user-interface changes
+
+
+During our road-map
+[https://lists.genode.org/pipermail/users/2019-December/006987.html - discussion],
+I vaguely mentioned my plan to change the administrative user interface of
+Sculpt OS. This post is a response to John's
+[https://lists.genode.org/pipermail/users/2020-January/007004.html - inquiry]
+for more details.
+
+
+Current state of Sculpt OS
+--------------------------
+
+The daily use of Sculpt OS has become natural for us Genode developers at
+Genode Labs. The administrative user interface - named Leitzentrale - has its
+quirks but it is flexible enough to be useful. In my perception, it does not
+stand in _our_ way by any means. But with the goal of capturing a broader user
+base, we are not there yet.
+
+Whereas a few graphical dialogs assist us to perform frequent tasks like
+installing and deploying components or setting up network connectivity,
+many one-off configuration tasks - like changing the keyboard layout - rely
+on the manual tweaking of files on the config file system. The management
+of all configuration aspects of the system via the config file system is
+certainly one of the most empowering concepts of Sculpt. But of course
+it relies a suitable user interface for manipulating files.
+
+Everyone of our team lives in the Unix terminal for most of the day.
+E.g., reflecting my computer use, I feel right at home with the Unix
+utilities and Vim while generally avoiding interactive programs, in
+particular rich GUI applications. So when it came to the question of
+how to manipulate files on Sculpt's Leitzentrale, the addition of Genode's
+readily available Unix runtime (Noux) required no second thought.
+
+
+Tearing it down
+---------------
+
+Even though it works well for us - just like anticipated - I plan to abolish
+it, for the following reasons:
+
+* Let's face it, not everyone loves the Unix command-line interface as
+  much as we do. Quite the opposite, actually. When presenting Sculpt, I can
+  clearly sense that people with non-Unix background are put off by it. The
+  audience generally loves the runtime graph, visual cues, discoverability.
+  In contrast, a command-line interface is not cheesy at all. It's more like
+  a slap in the face.
+
+  Many computer users outside our nerd bubble think of command-line interfaces
+  as being an archaic relic. The IT industry has moved past the era of MS-DOS,
+  right? Even though I personally favor textual user interfaces, they are
+  perceived as impenetrable by many computer users who are otherwise perfectly
+  happy with the notion of files and directories.
+
+* A Unix-based command-line interface may still be fine for a relatively
+  large crowd of users. But as soon as Vim comes into play - which is
+  inevitable when using the current version of Sculpt - we have just lost
+  another portion of potential users. Familiarity with Vim should definitely
+  not be a prerequisite for using an operating system! So let's drop it.
+  Let us instead employ a simple notepad-like editor that does not require
+  any learning curve.
+
+* The file-manipulation tasks performed in the Leitzentrale are rare and
+  simple. Relying on Unix for those basic tasks is like taking a sledgehammer
+  to crack a nut. On average, the Leitzentrale is used in just a few moments
+  a day for basic things like
+  * Browsing a file-system hierarchy,
+  * Looking at the reports stored the report file system,
+  * Deleting or copying a file or two, or
+  * Tweaking a configuration file.
+
+With these observations, I plan to replace the terminal-based inspect window
+with a simple custom file browser, file viewer, and editor. Why custom, you
+may ask? First, to keep the footprint low. A commodity GUI library like Qt
+would unreasonably inflate the boot image. Second, I want to stick to one
+coherent design language shared between the runtime graph and the new tools.
+The unique look and feel is the branding of Sculpt OS after all. Third, I
+think the feature set is simple enough to be implemented without a complex
+tool kit.
+
+Note that even once the Unix terminal is removed from Sculpt's Leitzentrale,
+you will still be able to manipulate Sculpt's config file system via a Unix
+runtime deployed as a regular component, similar to the use of the
+noux-system package we already have today.
+
+
+Refinements
+-----------
+
+The current layout of the Leitzentrale is not entirely logical. Especially
+the switching between the runtime graph and the inspect window is not obvious.
+Here is a summary of improvements I have in mind:
+
+# A new panel at the top of the screen contains two centered tabs for
+  switching between the runtime graph and the file-system browser.
+
+# The storage-management functionality will be moved from the storage dialog
+  into the respective nodes of the runtime graph. E.g., to format a block
+  device, the user should be able to select a block-device driver to get a
+  menu of block-device-level operations for the selected device.
+
+# The network-management will be moved from the network dialog into a drop-down
+  menu that can be toggled via a button at the right side of the panel. The
+  button could reflect the current network state just like any civilized
+  operating system does.
+
+# A new button on the left side of the panel will allow the user to toggle
+  a drop-down menu for GUI settings like the screen resolution or the keyboard
+  layout. The button must be at the top-left of the screen to make sure that
+  the menu remains visible on all screens regardless of the display
+  configuration. Think of the mirrored view of multiple displays of different
+  sizes.
+
+# Settings like keyboard layout or the wifi password will be accompanied
+  with a small lock symbol that allows the user to "fix" the setting. That
+  means, the setting will be preserved across reboots. No need to manually
+  copy files around.
+
+# At the bottom of the runtime graph, there will be a save
+  button so that the current deploy configuration is re-created at boot
+  time automatically. There could also be a restore button that resets
+  the state to the previously saved one. This way, the user can make
+  temporary changes in the component graph and just go back to the saved
+  default with a single click.
+
+# The log-message view will be hidden in another drop-down menu that can
+  be toggled via a panel button. So when starting the system, the user
+  is greeted with only the runtime graph.
+
+There are still a view open questions:
+
+* Where should we best present the messages about the progress of the
+  installation, or about diagnostics? Currently those messages are shown
+  in the runtime part of the menu dialog. May the bottom-left corner
+  of the runtime graph a suitable place?
+
+* With the menu dialog gone, where should the Genode logo go? The bottom
+  right corner of the runtime graph comes in mind...
+
+Please do not hesitate to tell me what you think of those changes.
+But I'm not overly cautious. It is an exploration. We can iterate.
+
