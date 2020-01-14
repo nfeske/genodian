@@ -80,7 +80,7 @@ program, disaster strikes:
 !           ^~~~~~~~~~~~
 ! compilation terminated.
 ! make: *** [hello] Error 1
-! [test:make] <builtin>: recipe for target 'hello' failed
+! [hello:make] <builtin>: recipe for target 'hello' failed
 ! Error: build via make failed
 
 Our program tries to include a header file that is nowhere to be found.
@@ -157,7 +157,7 @@ For running the scenario, we can use the 'goa run' command:
 ! download nfeske/api/timer_session/2019-11-23.tar.xz.sig
 ! Genode 19.08-191-g951271a2b2 <local changes>
 ! 17592186044415 MiB RAM and 8997 caps assigned to init
-! [init -> test] Hello
+! [init -> hello] Hello
 
 We can see that Goa automatically installed the dependencies needed to
 execute the runtime package, integrates a Genode scenario, and executes
@@ -167,7 +167,7 @@ the Genode processes:
 ! $ ps a | grep Genode
 !
 ! 8646 pts/3    Sl+    0:00 [Genode] init
-! 8649 pts/3    Sl+    0:00 [Genode] init -> test
+! 8649 pts/3    Sl+    0:00 [Genode] init -> hello
 ! 8650 pts/3    Sl+    0:02 [Genode] init -> timer
 
 You can cancel the execution of the Genode scenario via Control-C.
@@ -203,25 +203,25 @@ After the command finished, we find the source code sitting nicely in a new
 _src/_ directory. Let's try to build it:
 
 ! cmake_step2$ goa build
-! [test:cmake] -- The C compiler identification is GNU 8.3.0
-! [test:cmake] -- The CXX compiler identification is GNU 8.3.0
-! [test:cmake] -- Check for working C compiler: /usr/local/genode/tool/19.05/bin/genode-x86-gcc
-! [test:cmake] -- Check for working C compiler: /usr/local/genode/tool/19.05/bin/genode-x86-gcc -- works
-! [test:cmake] -- Detecting C compiler ABI info
-! [test:cmake] -- Detecting C compiler ABI info - done
-! [test:cmake] -- Detecting C compile features
-! [test:cmake] -- Detecting C compile features - done
-! [test:cmake] -- Check for working CXX compiler: /usr/local/genode/tool/19.05/bin/genode-x86-g++
-! [test:cmake] -- Check for working CXX compiler: /usr/local/genode/tool/19.05/bin/genode-x86-g++ -- works
-! [test:cmake] -- Detecting CXX compiler ABI info
-! [test:cmake] -- Detecting CXX compiler ABI info - done
-! [test:cmake] -- Detecting CXX compile features
-! [test:cmake] -- Detecting CXX compile features - done
-! [test:cmake] -- Configuring done
-! [test:cmake] -- Generating done
-! [test:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
-! [test:cmake] Scanning dependencies of target Tutorial
-! [test:cmake] [ 50%] Building CXX object CMakeFiles/Tutorial.dir/tutorial.cxx.obj
+! [cmake_step2:cmake] -- The C compiler identification is GNU 8.3.0
+! [cmake_step2:cmake] -- The CXX compiler identification is GNU 8.3.0
+! [cmake_step2:cmake] -- Check for working C compiler: /usr/local/genode/tool/19.05/bin/genode-x86-gcc
+! [cmake_step2:cmake] -- Check for working C compiler: /usr/local/genode/tool/19.05/bin/genode-x86-gcc -- works
+! [cmake_step2:cmake] -- Detecting C compiler ABI info
+! [cmake_step2:cmake] -- Detecting C compiler ABI info - done
+! [cmake_step2:cmake] -- Detecting C compile features
+! [cmake_step2:cmake] -- Detecting C compile features - done
+! [cmake_step2:cmake] -- Check for working CXX compiler: /usr/local/genode/tool/19.05/bin/genode-x86-g++
+! [cmake_step2:cmake] -- Check for working CXX compiler: /usr/local/genode/tool/19.05/bin/genode-x86-g++ -- works
+! [cmake_step2:cmake] -- Detecting CXX compiler ABI info
+! [cmake_step2:cmake] -- Detecting CXX compiler ABI info - done
+! [cmake_step2:cmake] -- Detecting CXX compile features
+! [cmake_step2:cmake] -- Detecting CXX compile features - done
+! [cmake_step2:cmake] -- Configuring done
+! [cmake_step2:cmake] -- Generating done
+! [cmake_step2:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
+! [cmake_step2:cmake] Scanning dependencies of target Tutorial
+! [cmake_step2:cmake] [ 50%] Building CXX object CMakeFiles/Tutorial.dir/tutorial.cxx.obj
 ! .../cmake_step2/src/tutorial.cxx:2:10: fatal error: cmath: No such file or directory
 !  #include <cmath>
 !           ^~~~~~~
@@ -252,12 +252,12 @@ required APIs and successfully builds the example program:
 ! download nfeske/api/posix/2019-02-25.tar.xz.sig
 ! download nfeske/api/stdcxx/2019-11-18.tar.xz
 ! download nfeske/api/stdcxx/2019-11-18.tar.xz.sig
-! [test:cmake] -- Configuring done
-! [test:cmake] -- Generating done
-! [test:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
-! [test:cmake] [ 50%] Building CXX object CMakeFiles/Tutorial.dir/tutorial.cxx.obj
-! [test:cmake] [100%] Linking CXX executable Tutorial
-! [test:cmake] [100%] Built target Tutorial
+! [cmake_step2:cmake] -- Configuring done
+! [cmake_step2:cmake] -- Generating done
+! [cmake_step2:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
+! [cmake_step2:cmake] [ 50%] Building CXX object CMakeFiles/Tutorial.dir/tutorial.cxx.obj
+! [cmake_step2:cmake] [100%] Linking CXX executable Tutorial
+! [cmake_step2:cmake] [100%] Built target Tutorial
 
 The resulting executable binary can be found at _var/build/x86_64/Tutorial_.
 Let's declare it a build artifact by mentioning it a new 'artifacts' file with
@@ -311,10 +311,10 @@ and "24" its actual argument. The '<content>' lists all ROM modules required.
 With this runtime package in place, let's give the Tutorial a run:
 
 ! cmake_step2/$ goa run
-! [test:cmake] -- Configuring done
-! [test:cmake] -- Generating done
-! [test:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
-! [test:cmake] [100%] Built target Tutorial
+! [cmake_step2:cmake] -- Configuring done
+! [cmake_step2:cmake] -- Generating done
+! [cmake_step2:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
+! [cmake_step2:cmake] [100%] Built target Tutorial
 ! download nfeske/bin/x86_64/base-linux/2019-11-25.tar.xz
 ! download nfeske/bin/x86_64/base-linux/2019-11-25.tar.xz.sig
 ! download nfeske/bin/x86_64/init/2019-11-23.tar.xz
