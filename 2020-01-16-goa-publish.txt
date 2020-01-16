@@ -1,0 +1,413 @@
+
+
+             Goa - publishing packages
+
+
+In the previous articles
+([https://genodians.org/nfeske/2019-12-13-goa-unix-bash - 1],
+[http://genodians.org/nfeske/2019-12-19-goa-unix-terminal - 2],
+[http://genodians.org/nfeske/2019-12-22-goa-unix-pipes - 3]) about Goa,
+we created a minimalistic Unix system by combining Genode's ready-to-use
+building blocks with universally loved GNU software. Now it's time to publish
+our little creation so that it can be deployed directly on Sculpt OS.
+
+Before we go on, let me point you to a new repository of mine that I
+use as an experimentation ground for Goa:
+
+:Norman's Goa playground repository:
+
+  [https://github.com/nfeske/goa-playground]
+
+In the repository, you can find the results of the previous episodes in
+the [https://github.com/nfeske/goa-playground/tree/master/intro - intro]
+directory. We will use the result of the previous article - found in the
+[https://github.com/nfeske/goa-playground/tree/master/intro/unix_3rd - unix_3rd]
+subdirectory - as the basis for the steps described below.
+
+
+Software-publishing prerequisites
+---------------------------------
+
+In order to provide packaged software to other Genode users, you will
+need the following prerequisites:
+
+# A publicly accessible place on the web where users can download
+  your software packages from.
+
+# A PGP key pair to protect the end-to-end integrity of your packages.
+
+This article does not cover the first point as there are so many options
+when it comes to web hosting. However, the use of PGP deserves an explanation.
+
+Genode's depot tools use Open-PGP signatures to ensure that the packages
+created by you are bit-for-bit identical to the packages arrived at the user's
+system. It works like this: You as the software provider create an Open-PGP
+key pair consisting of a private key and a matching public key. The private
+key must remain your secret. The public key should be made publicly available.
+
+You can use your private key to put _your_ digital signature on a package.
+Nobody else can forge your signature because the private key is known only
+to you. Once a user has downloaded the package, the signature attached to the
+package can be tested against the public key. If the package was mutated on
+the way to the user's machine, e.g., the web server was compromised by an
+attacker, this check would ultimately fail. The user is saved from the
+risk of running non-genuine or randomly broken software. Vice versa, if the
+signature check succeeds, the user can be certain to have obtained a
+bit-for-bit identical copy of the package created by the owner of the private
+key - the software provider.
+
+Since you are an aspiring software provider, you ought to have an Open-PGP
+key pair.
+
+
+Creating a key pair using GnuPG
+-------------------------------
+
+GnuPG is the go-to implementation of the Open-PGP standard. It is usually
+installed by default on GNU/Linux distributions. For reference, I'm currently
+using the version 2.2.4.
+
+! $ gpg --version
+! gpg (GnuPG) 2.2.4
+! libgcrypt 1.8.1
+! ...
+
+If you are already using GPG for encrypting/signing email, you may in
+principle use your existing key pair. If so, you may skip this section.
+
+To create a new key pair, one can use the following command:
+
+! $ gpg --full-generate-key
+! gpg (GnuPG) 2.2.4; Copyright (C) 2017 Free Software Foundation, Inc.
+! This is free software: you are free to change and redistribute it.
+! There is NO WARRANTY, to the extent permitted by law.
+! 
+! Please select what kind of key you want:
+!    (1) RSA and RSA (default)
+!    (2) DSA and Elgamal
+!    (3) DSA (sign only)
+!    (4) RSA (sign only)
+! Your selection? 
+
+Stick to the default (RSA) by hitting enter. Next, we are asked for the key
+size.
+
+! RSA keys may be between 1024 and 4096 bits long.
+! What keysize do you want? (3072)
+
+I was once told that 4096 is a good number. So let's put it in.
+Next, we are asked to decide for how long we want to use this key.
+
+! Please specify how long the key should be valid.
+!          0 = key does not expire
+!       <n>  = key expires in n days
+!       <n>w = key expires in n weeks
+!       <n>m = key expires in n months
+!       <n>y = key expires in n years
+! Key is valid for? (0)
+
+For our use case, there is no point in limiting the key's lifetime.
+Press enter to let the key never expire.
+
+! Key does not expire at all
+! Is this correct? (y/N)
+
+The tool apparently wants to have us think twice about it. Well, typing 'y'
+gives it the assurance it desires.
+
+Next, the question about our real name. Well, I'm calling myself "John K." now.
+
+! Real name: John K.
+
+When asked for the email address, it's technically fine to just fill-in some
+place holder.
+
+Should you intend to widely publish your public key, e.g., by uploading it to
+a key server, please consider using your real identity. You want to be trusted
+by the users of your software after all, don't you? A real identity is
+certainly more trustworthy than a random internet person hiding behind a
+pseudonym.
+
+! Email address: a@b.cd
+
+Next, we can leave a comment. But we can also leave it blank by pressing enter.
+
+! Comment:
+! You selected this USER-ID:
+!     "John K. <a@b.cd>"
+!
+! Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit?
+
+After pressing 'o', we are greeted with a dialog asking for a new passphrase.
+This passphrase is used to encrypt your private key before storing it in a
+file. In the event of a leak of this file, your private key remains still a
+secret unless your passphrase becomes known. Hence, you should better not
+write down your passphrase but keep it in your head only. Once we supplied our
+passphrase, GPG confirms the creation of the new key pair with a message like
+this:
+
+! ...
+! public and secret key created and signed.
+!
+! pub   rsa4096 2020-01-16 [SC]
+!       96541E89AA71BAA88DF56C538ADB04B1F162AF2D
+! uid                      John K. <a@b.cd>
+! sub   rsa4096 2020-01-16 [E]
+
+When inspecting the GPG keyring via the command 'gpg --list-secret-keys', we
+can see the new key listed:
+
+! $ gpg --list-secret-keys
+! ...
+! sec   rsa4096 2020-01-16 [SC]
+!       96541E89AA71BAA88DF56C538ADB04B1F162AF2D
+! uid           [ultimate] John K. <a@b.cd>
+! ssb   rsa4096 2020-01-16 [E]
+
+
+A quick look back at the project we wish to publish
+---------------------------------------------------
+
+To publish the depot content for a given Goa project, first change to the
+project directory. For example, within the 'goa-playground' repository linked
+above, I'd change to the 'unix_3rd' directory.
+
+! git clone https://github.com/nfeske/goa-playground.git
+! cd goa-playground/intro/unix_3rd/
+
+Before proceeding, please make sure to use the latest version of the Goa tool.
+
+! goa update-goa
+
+It is always a good idea to give the project a quick try before publishing it.
+
+! goa run
+
+Goa will download all the components needed to build the scenario, and execute
+it directly on the GNU/Linux development machine. You should see the terminal
+window familiar from the
+[http://genodians.org/nfeske/2019-12-22-goa-unix-pipes - previous article].
+
+When peeking at the _var/public/_ directory now, we see the downloaded
+archives and signatures. For example,
+
+! $ find var/public/nfeske/bin/x86_64/terminal
+! var/public/nfeske/bin/x86_64/terminal
+! var/public/nfeske/bin/x86_64/terminal/2019-12-12.tar.xz
+! var/public/nfeske/bin/x86_64/terminal/2019-12-12.tar.xz.sig
+
+The 'sig' file is the signature that I (Norman) created via my private PGP
+key when I originally published the terminal. After downloading, Goa verifies
+the signature using my (Norman's) public key that is provided at
+_var/depot/nfeske/pubkey_.
+
+When taking a look at the _var/depot/_ directory, we see the depot
+content extracted from the corresponding 'tar.xz' archives.
+
+
+Exporting the project to a Genode depot
+---------------------------------------
+
+Genode package management organizes software in a so-called depot, which is a
+directory with a special structure explained in
+[https://genode.org/documentation/genode-foundations/19.05/development/Package_management.html - Genode's documentation].
+To create depot content for _our_ project, Goa features the 'goa export'
+command. Let's give it a try without a second thought.
+
+! $ goa export
+! Error: missing definition of depot user
+!
+!  You can define your depot user name by setting the 'depot_user' 
+!  variable in a .goarc file, or by specifing the '--depot-user <name>' 
+!  command-line argument.
+
+As hinted by the error message, Goa needs to know the name of us as the
+software provider. The depot user name will correspond to the sub directory
+within the depot that will host our content. Let us try the command again,
+but specifying the user name "john" this time.
+
+! $ goa export --depot-user john
+! Error: version for archive john/raw/unix_3rd undefined
+!
+!  Create a 'version' file in your project directory, or 
+!  define 'set version(john/raw/unix_3rd) <version>' in your .goarc file.
+
+This time, Goa seems to be happy about our depot user name but it apparently
+misses any version information about our project. Indeed, while following the
+steps of the previous articles, we did not talk or think about versions at
+all. Now it is time to make up our minds about a suitable version identifier.
+In principle, any character string will do, as long as it does not contain
+anything fancy like whitespace. It is generally a good practice to just use
+the current date. Hence, we write the version identifier into a new file
+called _version_:
+
+! $ echo 2020-01-16 > version
+
+Let's give 'goa export' another try.
+
+! $ goa export --depot-user john
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2020-01-16
+! Error: missing README file at pkg/unix_3rd/README
+
+This looks like a partial success! When inspecting _var/depot/_ now, we
+can indeed find content that looks pretty familiar.
+
+! $ ls var/depot/john/raw/unix_3rd/2020-01-16/
+! terminal.config  unix.config  vimrc
+
+However, let's pay attention to the 'Error:' part of the message. By
+convention, each depot package features a README file, and Goa nags us to
+follow this convention. We have to give in. Create a file at
+_pkg/unix_3rd/README_ with content of your choice. The README should contain
+a short description of the purpose of the package, along with instructions
+for using it.
+I recommend following the [https://github.com/nfeske/gosh - GOSH] markup
+syntax as consistently used throughout Genode's documentation. This will
+allow future versions of Sculpt OS to present your text nicely formatted
+to the user.
+
+With the README file in place, let's try again:
+
+! $ goa export --depot-user john
+! Error: archive john/raw/unix_3rd/2020-01-16 already exists in the depot
+!
+!  You may specify '--depot-overwrite' to replace the existing version.
+
+Goa wants to save us from accidentally overwriting existing depot content,
+which can happen, for example, if we made changes in the project but forgot to
+adjust the _version_ file. In our case just now, however, the message results
+from our partial success above. Remember that _raw/unix_3rd_ was actually
+exported already. So we are safe to specify the '--depot-overwrite' argument
+as suggested by Goa.
+
+! $ goa export --depot-user john --depot-overwrite
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2020-01-16
+! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2020-01-16
+
+This time, the command suceeded. To celebrate the success, review the
+content of our part our - john's part - of the depot.
+
+! $ find var/depot/john/
+! var/depot/john/
+! var/depot/john/raw
+! var/depot/john/raw/unix_3rd
+! var/depot/john/raw/unix_3rd/2020-01-16
+! var/depot/john/raw/unix_3rd/2020-01-16/terminal.config
+! var/depot/john/raw/unix_3rd/2020-01-16/vimrc
+! var/depot/john/raw/unix_3rd/2020-01-16/unix.config
+! var/depot/john/pkg
+! var/depot/john/pkg/unix_3rd
+! var/depot/john/pkg/unix_3rd/2020-01-16
+! var/depot/john/pkg/unix_3rd/2020-01-16/archives
+! var/depot/john/pkg/unix_3rd/2020-01-16/runtime
+! var/depot/john/pkg/unix_3rd/2020-01-16/README
+
+You can nicely see here how the _version_ file defines the name of the
+subdirectory of the content.
+
+
+Signing and archiving
+---------------------
+
+Even though the depot content looks good, it has not yet a suitable form
+for distributing it. We ultimately need to wrap the content in archive files
+and apply our digital signature to these archives. Fortunately, we don't
+need to do these steps manually. Goa assists us with the 'publish' command.
+This command implicity executes the 'goa export' command. So we need to
+specify all information that we supplied to 'export'.
+
+! $ goa publish --depot-user john --depot-overwrite
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2020-01-16
+! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2020-01-16
+! Error: missing public key at .../unix_3rd/var/depot/john/pubkey
+!
+!  You may use the 'goa add-depot-user' command. 
+!  To learn more about this command:
+!
+!    goa help add-depot-user
+
+Goa cannot know which key to use for signing the depot content. It only knows
+the name of our made-up depot user "john". But we have not yet drawn the
+connection to the PGP key pair we have created at the beginning of this
+article. The 'goa add-depot-user' command closes the circle.
+
+! $ goa add-depot-user john --depot-url "https://your-domain/and/url" \
+!                           --gpg-user-id "a@b.cd" \
+!                           --depot-overwrite
+
+The URL specified as '--depot-url' argument should point to the designated
+location of the archives on your web server. For reference, my (Norman's)
+depot URL is [https://depot.genode.org/]. Note that the URL points to the
+root of the depot directory structure, not the depot user's sub directory.
+
+The '--gpg-user-id' can be any GPG user-ID string as understood by GPG.
+In the example above, we used the email address that we specified for the
+GPG key pair.
+
+The '--depot-overwrite' argument is specified because Goa tries to prevent us
+from accidentally overwriting information of existing depot content, like
+the content we just created with the 'goa export' command. It is interesting
+to take a look at the content of the depot user "john" now.
+
+! $ find var/depot/john/
+! var/depot/john/
+! var/depot/john/pubkey
+! var/depot/john/download
+
+The content we extracted before is no more. Instead, there is fresh
+subdirectory _john_ with the information we supplied to the 'goa
+add-depot-user' command. Take the time to look into both files. Goa extracted
+the ASCII-armored _pubkey_ from the GPG keyring by using the specified GPG
+user ID.
+
+With the connection between the depot user "john" and his key pair drawn,
+let us give Goa another chance to publish the project.
+
+! $ goa publish --depot-user john --depot-overwrite
+
+This time, Goa is able to proceed, as indicated by the following messages:
+
+! publish .../var/public/john/pkg/unix_3rd/2020-01-16.tar.xz
+! publish .../var/public/john/raw/unix_3rd/2020-01-16.tar.xz
+
+We are also asked by GPG for our passphrase for decrypting our private key.
+We obey.
+
+Once the command completed, we can find the archived and signed depot content
+at _var/public/john/:_
+
+! $ find var/public/john
+! var/public/john
+! var/public/john/raw
+! var/public/john/raw/unix_3rd
+! var/public/john/raw/unix_3rd/2020-01-16.tar.xz.sig
+! var/public/john/raw/unix_3rd/2020-01-16.tar.xz
+! var/public/john/pkg
+! var/public/john/pkg/unix_3rd
+! var/public/john/pkg/unix_3rd/2020-01-16.tar.xz.sig
+! var/public/john/pkg/unix_3rd/2020-01-16.tar.xz
+
+
+Syncing the public depot content to the web server
+--------------------------------------------------
+
+The entirety of the _var/public/john_ directory can now be copied as is
+to the web server. The way of how this content is uploaded is up to you.
+
+Personally, I'm using the fantastic [https://en.wikipedia.org/wiki/Rsync - rsync]
+tool with the following combination of arguments:
+
+! -rpltOvzu --checksum --chmod=Dg+s,ug+w,o-w,+X
+
+You may not believe me but that's not my poor attempt at ASCII art.
+Please use 'man rsync' to decrypt this information.
+
+
+Next step
+---------
+
+Now that our little Unix scenario has become publicly available in the
+form of downloadable depot content, it is ready to be deployed by users of
+Sculpt OS. The deployment step will be covered in the next episode. Stay
+tuned.
+
