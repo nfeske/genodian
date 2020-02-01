@@ -1,0 +1,24 @@
+
+
+                   Sculpt OS - FOSDEM 2020 Edition
+
+
+In my [https://fosdem.org/2020/schedule/event/uk_sculpt/ - talk at FOSDEM],
+I present a brand new version of Sculpt OS. It is a preview of the upcoming
+release. For those of you who are eager to play with this version, I have
+put a downloadable image online.
+
+You can find the system image of the Sculpt system used during my talk here:
+
+:Disk image of Sculpt OS - FOSDEM 2020 Edition:
+
+  [https://genode.org/files/sculpt/sculpt-fosdem-2020.img]
+
+As a note of warning, this image is not well tested. Don't use it as a
+basis for anything important.
+
+Please refer to the official
+[https://genode.org/download/sculpt - instructions] and
+[https://genode.org/documentation/articles/sculpt-19-07 - documentation]
+for installing the image on a USB stick and for the concepts of Sculpt OS.
+
