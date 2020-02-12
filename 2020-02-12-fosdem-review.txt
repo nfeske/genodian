@@ -1,0 +1,121 @@
+
+
+                           FOSDEM 2020 in review
+
+FOSDEM and the microkernel developer room in particular was certainly one
+of the highlights of the year. In this posting, I share my personal impression
+of the event and a few links of interest.
+
+
+For me, this year's FOSDEM was flying by as quickly as never before. The main
+reason was my ambitious plan to present the *next* version of Sculpt OS
+rather than the current one. When I originally submitted the talk, I was
+planning to show off the by-then current version of Sculpt, which would
+have been an easy feat. However, since then, there emerged a
+[http://genodians.org/nfeske/2020-01-06-pending-sculpt-ui - concrete plan] for
+reorganizing Sculpt's administrative user interface. The new concept would
+embody the philosophy of Sculpt much better. Since the FOSDEM presentations
+are captured on video, I figured that the video about Sculpt OS should better
+not feature the old user interface but rather show the new one. The problem
+was, however, that my vision of the new user interface existed merely in
+my head but was not implemented yet. But motivation was strong! I literally
+developed major parts of the user interface as shown in the demo - in
+particular the file browser - in the train to FOSDEM, and the development and
+testing work continued in the evenings until late at night. The intensive
+work paid off as I could deliver the demo just as I intended.
+
+:Video capture of the Sculpt OS demo:
+
+  [https://fosdem.org/2020/schedule/event/uk_sculpt/]
+
+The downside of this approach was my stress level, which largely kept me from
+enjoying FOSDEM as a leisure activity. My head was spinning the whole time.
+
+
+Microkernel developer room
+--------------------------
+
+Since initiated in 2011 by our friends of the
+[http://www.helenos.org/ - HelenOS] project, the microkernel
+devroom has become almost an institutional gathering of open-source projects
+related to microkernel technology. It created a great sense of community and a
+collaborative spirit among the various projects, which is the reason I look
+forward to FOSDEM every year. In this spirit, the organization of the devroom
+is carried out by a different project each year. This time, Julian Stecklina
+took over the torch. Thanks Julian for the great work preparing and holding
+the event!
+
+Over the years, the devroom grew from a family meeting to a packed room of
+about 100 people. Without any doubt, the reputation and the commercial
+interest in the topics discussed in the room has grown quite significantly.
+E.g., this year, tech celebrity Gernot Heiser made a
+[https://fosdem.org/2020/schedule/event/uk_sel4/ - physical presence],
+and the traditional microkernel dinner turned into a reception sponsored by
+the silicon valley startup [https://www.bedrocksystems.com/ - Bedrock].
+The latter took many of the regular attendees - myself included - by surprise.
+
+The
+[https://fosdem.org/2020/schedule/track/microkernels_and_component_based_os/ - lineup]
+of presentations was really worth staying in the room for the whole
+day. But given the breath and depths of the audience and the lively
+discussions in-between the talks, I got the feeling that I would have
+experienced a great day even without a single presentation. ;-) Time rushed
+by far too quickly. I missed catching up with so many fantastic people I
+spotted in the audience.
+
+
+Outside the developer room
+--------------------------
+
+On Saturday, I had the chance to wander around at FOSDEM for a bit.
+Even though I vastly enjoyed the creative atmosphere of the event like
+every year, I have to admit that the overcrowding made me uneasy. Hopping
+between different venues is no longer viable because of the capacity limits
+of most rooms.
+There were still a few safe heavens though. In particular, I enjoyed staying
+a while in the [https://fosdem.org/2020/schedule/track/ada/ - Ada devroom]
+and the spacey Janson auditorium, watching the
+talk about [https://fosdem.org/2020/schedule/event/blender/ - Blender] in
+awe.
+
+
+Genode at FOSDEM
+----------------
+
+On Saturday, Martin Stein presented his experimental
+kernel named Spunky, which is a re-implementation of Genode's custom
+kernel in Ada/SPARK:
+
+[https://fosdem.org/2020/schedule/event/ada_spunky/]
+
+On Sunday, I gave the live demonstration of Sculpt OS:
+
+[https://fosdem.org/2020/schedule/event/uk_sculpt/]
+
+Stefan Kalkowski presented our
+recent development of running Genode on 64-bit ARM platforms:
+
+[https://fosdem.org/2020/schedule/event/uk_genode_armv8/]
+
+Alexander Senier gave an update about his effort to bring the Android
+runtime to Genode:
+
+[https://fosdem.org/2020/schedule/event/uk_android/]
+
+Udo Steinberg introduced the NOVA microhypervisor for the 64-bit ARM
+architecture, highlighting the fruitful collaboration of his team with
+us at Genode Labs:
+
+[https://fosdem.org/2020/schedule/event/uk_nova/]
+
+
+Further listening
+-----------------
+
+Only tangential related to FOSDEM but very well worth mentioning, there is a
+new episode of the Syslog podcast. This episode covers the background of
+Genode. Thanks to Julian and Florian for their invitation to have me on their
+show!
+
+[https://syslog.show/2020/02/06/episode2.html]
+
