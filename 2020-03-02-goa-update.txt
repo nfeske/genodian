@@ -1,0 +1,65 @@
+
+
+                       Goa updated to Genode 20.02
+
+
+Now that Genode 20.02 is out of the door, it's a good time to update Goa to
+the match the most recent Genode version.
+
+
+If you have installed [https://github.com/nfeske/goa - Goa] already, you
+can update the tool for the use of the current version 20.02 of Genode and
+Sculpt OS by issuing:
+
+! goa update-goa master
+
+Should you want to switch back to the previous version 19.11, you can always
+do so via:
+
+! goa update-goa 19.11
+
+You can check the current Goa version via 'goa --version'.
+
+
+Article series
+--------------
+
+The following articles have been updated and re-tested with Genode 20.02:
+
+:Goa - streamlining the development of Genode applications:
+
+  [https://genodians.org/nfeske/2019-11-25-goa]
+
+:Goa - sticking together a little Unix (part 1):
+
+  [https://genodians.org/nfeske/2019-12-13-goa-unix-bash]
+
+:Goa - sticking together a little Unix (part 2):
+
+  [https://genodians.org/nfeske/2019-12-19-goa-unix-terminal]
+
+:Goa - sticking together a little Unix (part 3):
+
+  [https://genodians.org/nfeske/2019-12-22-goa-unix-pipes]
+
+:Goa - publishing packages:
+
+  [https://genodians.org/nfeske/2020-01-16-goa-publish]
+
+You can see the changes in detail in the corresponding
+[https://github.com/nfeske/genodian/commits/master - history].
+
+
+Caveats
+-------
+
+If you followed the steps of the Unix tutorial with Genode 19.11 and want
+to update your project to version 20.02, make sure to add the definition
+of the 'PATH' environment variable to the bash shell. Otherwise, pipes
+won't work. The Goa playground repository has been updated in this regard.
+
+:Norman's Goa playground:
+
+  [https://github.com/nfeske/goa-playground/commits/master]
+
+
