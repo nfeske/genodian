@@ -40,7 +40,7 @@ Analogous to the bash package, described in the
 there is a single TAR archive containing all the files that comprise the
 coreutils installation.
 
-! $ tar tf var/depot/nfeske/bin/x86_64/coreutils/2019-11-18/coreutils.tar
+! $ tar tf var/depot/nfeske/bin/x86_64/coreutils/2020-02-19/coreutils.tar
 ! ./
 ! ./lib/
 ! ...
@@ -126,6 +126,15 @@ does the trick (pay attention to the third <service> node).
 !     <child name="vfs_rom"/> </service>
 !   <any-service> <parent/> <any-child/> </any-service>
 ! </route>
+
+In the following, we don't want to refer to the Unix commands using their
+full paths but by their names. So let us set the 'PATH' environment variable
+in the '<config>' of bash's '<start>' node.
+
+! <config>
+!   ..
+!   <env key="PATH" value="/bin"/>
+! </config>
 
 The next try of 'goa run' yields the following result:
 
@@ -288,16 +297,19 @@ utilities, combine them with pipes, and edit files with the full
 comfort of Vim. All that has become possible with less than 150 lines of XML:
 
 ! $ wc -l raw/unix.config raw/terminal.config pkg/unix/runtime
-!   88 raw/unix.config
+!   89 raw/unix.config
 !   10 raw/terminal.config
 !   29 pkg/unix/runtime
-!  127 total
+!  128 total
 
 
-Outlook
--------
+The next step
+-------------
 
 In the next episode, we will see how to publish the result as a Genode
 package, ready to be deployed on Sculpt OS.
+[https://genodians.org/nfeske/2020-01-16-goa-publish - Read on...]
 
+
+_Edit (2020-03-02): updated to Genode 20.02_
 

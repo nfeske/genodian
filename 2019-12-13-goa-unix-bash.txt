@@ -52,28 +52,26 @@ Let's see what happens when issuing the 'run' command we know from the
 previous article:
 
 ! $ goa run
-! download nfeske/bin/x86_64/base-linux/2019-12-12.tar.xz
-! download nfeske/bin/x86_64/base-linux/2019-12-12.tar.xz.sig
-! download nfeske/bin/x86_64/bash/2019-11-25.tar.xz
-! download nfeske/bin/x86_64/bash/2019-11-25.tar.xz.sig
-! download nfeske/bin/x86_64/init/2019-12-12.tar.xz
-! download nfeske/bin/x86_64/init/2019-12-12.tar.xz.sig
-! download nfeske/src/base-linux/2019-12-12.tar.xz
-! download nfeske/src/base-linux/2019-12-12.tar.xz.sig
-! download nfeske/src/bash/2019-11-25.tar.xz
-! download nfeske/src/bash/2019-11-25.tar.xz.sig
-! download nfeske/src/init/2019-12-12.tar.xz
-! download nfeske/src/init/2019-12-12.tar.xz.sig
-! download nfeske/api/base/2019-11-23.tar.xz
-! download nfeske/api/base/2019-11-23.tar.xz.sig
-! download nfeske/api/base/2019-11-25.tar.xz
-! download nfeske/api/base/2019-11-25.tar.xz.sig
-! download nfeske/api/libc/2019-11-18.tar.xz
-! download nfeske/api/libc/2019-11-18.tar.xz.sig
+! download nfeske/bin/x86_64/base-linux/2020-02-27.tar.xz
+! download nfeske/bin/x86_64/base-linux/2020-02-27.tar.xz.sig
+! download nfeske/bin/x86_64/bash/2020-02-27.tar.xz
+! download nfeske/bin/x86_64/bash/2020-02-27.tar.xz.sig
+! download nfeske/bin/x86_64/init/2020-02-27.tar.xz
+! download nfeske/bin/x86_64/init/2020-02-27.tar.xz.sig
+! download nfeske/src/base-linux/2020-02-27.tar.xz
+! download nfeske/src/base-linux/2020-02-27.tar.xz.sig
+! download nfeske/src/bash/2020-02-27.tar.xz
+! download nfeske/src/bash/2020-02-27.tar.xz.sig
+! download nfeske/src/init/2020-02-27.tar.xz
+! download nfeske/src/init/2020-02-27.tar.xz.sig
+! download nfeske/api/base/2020-02-27.tar.xz
+! download nfeske/api/base/2020-02-27.tar.xz.sig
+! download nfeske/api/libc/2020-02-19.tar.xz
+! download nfeske/api/libc/2020-02-19.tar.xz.sig
 ! download nfeske/api/noux/2019-11-18.tar.xz
 ! download nfeske/api/noux/2019-11-18.tar.xz.sig
-! download nfeske/api/os/2019-12-12.tar.xz
-! download nfeske/api/os/2019-12-12.tar.xz.sig
+! download nfeske/api/os/2020-02-27.tar.xz
+! download nfeske/api/os/2020-02-27.tar.xz.sig
 ! download nfeske/api/posix/2019-02-25.tar.xz
 ! download nfeske/api/posix/2019-02-25.tar.xz.sig
 ! download nfeske/api/report_session/2019-02-25.tar.xz
@@ -91,13 +89,13 @@ Besides the binaries, it also fetches all source codes. You can find all the
 downloads at _var/depot/_. One particularly interesting directory is the
 binary archive for bash:
 
-! $ ls var/depot/nfeske/bin/x86_64/bash/2019-11-25/
+! $ ls var/depot/nfeske/bin/x86_64/bash/2020-02-27/
 ! bash.tar
 
 It contains a single tar archive, which in turn, contains all installation
 files of bash. Let's take a look inside:
 
-! $ tar tf var/depot/nfeske/bin/x86_64/bash/2019-11-25/bash.tar
+! $ tar tf var/depot/nfeske/bin/x86_64/bash/2020-02-27/bash.tar
 ! ./
 ! ./share
 ! ./share/doc
@@ -168,7 +166,7 @@ the root of the virtual file system in a read-only fashion.
 When trying to 'run' the scenario now, we see a bunch of error messages:
 
 ! $ goa run
-! Genode 19.11-49-g11ba8b18fa <local changes>
+! Genode 20.02-1-gac1b2ec24e
 ! 17592186044415 MiB RAM and 8997 caps assigned to init
 ! [init -> unix] Error: vfs: environment ROM session denied ...
 
@@ -210,7 +208,7 @@ entry to the _runtime_ file. The <content> should now look as follows:
 When running the scenario again, we see a sign of hope:
 
 ! goa run
-! Genode 19.11-49-g11ba8b18fa <local changes>
+! Genode 20.02-1-gac1b2ec24e
 ! 17592186044415 MiB RAM and 8997 caps assigned to init
 ! [init -> unix -> vfs] tar archive 'bash.tar' local at ...
 
@@ -247,7 +245,7 @@ attribute to init's <config> node. Another try of 'goa run' reveals the
 following output.
 
 ! $ goa run
-! Genode 19.11-49-g11ba8b18fa <local changes>
+! Genode 20.02-1-gac1b2ec24e
 ! 17592186044415 MiB RAM and 8997 caps assigned to init
 ! [init -> unix] parent provides
 ! [init -> unix]   service "ROM"
@@ -363,3 +361,4 @@ In the next episode, we will add an interactive terminal.
 [https://genodians.org/nfeske/2019-12-19-goa-unix-terminal - Read on...]
 
 
+_Edit (2020-03-02): updated to Genode 20.02_
