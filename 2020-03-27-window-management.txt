@@ -1,0 +1,306 @@
+
+           Compartmentalized window management in Sculpt OS
+
+
+When using Sculpt OS day-in day-out, the simple default window manager as
+introduced in the manual is quite limiting. This article presents an
+alternative that is able to remember window positions across reboots, swap out
+window decorations on the fly, and that empowers the user to modify the window
+layout directly via a textual interface.
+
+
+If you followed the steps given in the official
+[https://genode.org/documentation/articles/sculpt-20-02#Getting_a_first_impression - Sculpt manual],
+you have already encountered the so-called "themed wm" window-manager
+component. When plugging this component in-between the system's low-level GUI
+server called nitpicker, it equips each client with window decorations and
+thereby allows the user to freely position graphical applications on screen.
+From the application's perspective, the presence of the window manager is
+transparent because the window manager provides exactly the same interface as
+the low-level GUI server.
+
+
+Multi-component architecture
+----------------------------
+
+When looking a bit deeper, the themed-wm component is actually not a single
+component but a composition of components that work together. If you are
+curious to glimpse behind the curtain, you may have a look at the
+[https://github.com/genodelabs/genode/blob/master/repos/gems/recipes/raw/motif_wm/wm.config - init configuration]
+of the window-manager sub system.
+
+[image window_manager]
+
+Each of the three components "window manager ", "decorator", and "layouter"
+has a clear-cut role. Both the decorator and the layouter are mere clients of
+the window manager. In addition to this client-server relationship, the
+components exchange information via the report-ROM component, which provides a
+publisher-subscriber mechanism with a strict information-flow policy by
+implementing Genode's report and ROM session interfaces. This pattern is
+described in detail in the
+[https://genode.org/documentation/genode-foundations/19.05/components/Component_composition.html#Publishing_and_subscribing - Genode Foundations]
+book.
+
+The *window manager* acts as a low-complexity mediator between the
+potentially complex and policy-rich decorator and layouter components as well
+as the actual client applications. It is designed to not depend on the
+behavior of the liveliness of other components. It does not touch any pixels,
+which helps to keep its complexity lower than 3000 lines of code. The
+component is ultimately part of the trusted computing base of graphical
+client applications. For example, it must be trusted to uphold the strict
+separation between multiple GUI applications from each other. Thankfully, with
+its low complexity, this is an attainable goal. As a disclaimer, the window
+manager did not undergo a thorough analysis yet. So we cannot claim
+perfection. Yet. ;-)
+
+The *layouter* obtains a list of windows - including properties like their
+title and size in pixels - from the window manager and is tasked to produce a
+window layout. The window layout is a geometric description of the scene
+including the stacking order and position of windows. In contrast to the
+window layouter, which provides a mechanism only but no policy, the layouter is
+a policy-rich component as it takes the decision where each client application
+appears on screen. It controls the layout, hence its name.
+
+The *decorator* consumes a window layout and is tasked to draw window
+decorations according to the layout. It performs the dirty - and potentially
+complex and bug-prone - work of pixel manipulation and supplies the result to
+the window manager using the regular nitpicker client interface. The decorator
+is the only component that knows where window controls like the close button
+or the window-resize border are located and how they look like. To enable the
+interaction of the user with these window controls, the decorator gets
+presented with the current pointer position and produces a hover report in
+return. This hover report contains the information about the currently hovered
+window and window control. This report, in turn, is picked up by the layouter
+to take layout-policy decisions.
+
+Granted, compared with contemporary GUI architectures, this construction looks
+quite unusual. But it brings a number of benefits:
+
+* From an information-security standpoint, neither the decorator nor the
+  layouter need to be trusted. Those components cannot observe any user
+  input typed into the application nor any mouse clicks, and they cannot
+  see the content of any application window. In theory, they could conspire
+  by the means of leaking information from one application to another by
+  using window resizing as a covert channel. But well, we are entering
+  tin-foil-hat territory...
+
+* Both the layouter and decorator are sandboxed such that they cannot
+  communicate to anyone besides the window manager. E.g., even if malicious,
+  the decorator could not leak information to the network.
+
+* Different tastes and policies can be accommodated by replacing or tweaking
+  the untrusted decorator and layouter components.
+  The security-critical window-manager component can stay the same.
+  Adding complexity and fancy features to the decorator won't hurt the
+  security.
+
+* Since the decorator and layouter are loosely coupled, they can be mixed and
+  matched and replaced at runtime. The window manager does not depend on them.
+
+
+Creating the component composition manually
+-------------------------------------------
+
+Let's switch from theory to practice by booting Sculpt OS.
+
+Besides the "themed wm" package, the "GUI" menu in the genodelabs depot menu
+features all individual pieces needed to manually create the multi-component
+window manager as described above.
+
+For experimenting, let us use Sculpt's RAM file system by selecting the "Use"
+button in the "ram fs" component. Also connect Sculpt to the network as
+described in the manual.
+
+# Obtain the depot index of "genodelabs" via the "+" menu.
+
+  ! Depot... -> Selection... -> genodelabs
+
+# Add the window manager via the "+" menu.
+
+  ! Depot... -> genodelabs... -> GUI... -> wm
+
+  Connect it as follows:
+
+  * 'GUI (focus) -> keyboard focus'
+
+    This will put the window manager into the position of controlling the
+    keyboard focus, which is a natural part of its job after all.
+
+  * 'GUI -> system GUI server'
+
+    This allows the window manager to use the low-level GUI server and
+    underlying mechanism for graphical output and user input.
+
+  * 'Report (shape) -> pointer shape'
+
+    This grants the window manager the control over the form of the mouse
+    pointer.
+
+  * 'Report (clipboard) -> global clipboard'
+
+    This allows the window manager (and thereby its clients) to paste
+    clipboard content to the system-global clipboard.
+
+  * 'ROM (clipboard) -> global clipboard'
+
+    This allows the window manager (and by extension, its clients) to read
+    content from the system-global clipboard.
+
+# Add a decorator via the "+" menu, giving the motif-styled decorator a try.
+
+  ! Depot... -> genodelabs... -> GUI... -> motif decorator
+
+  Connect it as follows:
+
+  * 'ROM (window layout) -> wm'
+
+    This makes the current window layout available to the decorator.
+    The window manager acts as an information broker here.
+
+  * 'ROM (pointer) -> wm'
+
+    This exposes the pointer position to the decorator.
+
+  * 'Report -> wm'
+
+    This gives the decorator the ability to report the information about
+    the currently hovered window controls and decorator margins to the
+    window manager.
+
+  * 'GUI -> wm'
+
+    Simply speaking, this gives the decorator a drawing surface for the
+    painted window decorations. The decorator is not supplied with any
+    user input events though.
+
+# Add the layouter via the "+" menu.
+
+  ! Depot... -> genodelabs... -> GUI... -> window layouter
+
+  Connect it as follows:
+
+  * 'GUI -> wm'
+
+    This allows the layouter to consume user-input events. This includes all
+    user-input events that refer to window decorations. So the layouter is
+    able to observe mouse clicks or drag operations that refer to window
+    controls.
+
+  * 'ROM (window list) -> wm'
+  * 'ROM (focus request) -> wm'
+  * 'ROM (hover) -> wm'
+  * 'ROM (decorator margins -> wm'
+
+    These assignments allow the layouter to observe the respective
+    information, originating either from the window manager, or indirectly
+    from the decorator (hover, decorator margins). For the latter, the
+    window manager acts as information broker.
+
+  * 'Report -> wm'
+
+    This allows the layouter to report the window layout, window-resize
+    requests, or the current keyboard focus to the window manager.
+
+  * 'File system (recall) -> used file system'
+
+    This gives the layouter a location to store its state beyond its lifetime.
+    For now, let's hand out the currently used file system, to keep things
+    simple.
+
+# Add a GUI example application to play with via the "+" menu.
+
+  ! Depot... -> genodelabs... -> GUI... -> sticks blue backdrop
+
+  This is the default backdrop component. But now, we connect it to the
+  window manager 'wm' instead of the desktop background.
+
+# Add the Qt text editor example via the "+" menu.
+
+  ! Depot... -> genodelabs... -> Tools... -> qt5 textedit
+
+  Connect it as follows:
+
+  * 'File system -> used file system'
+
+    This is the file system with the files we'd like to edit.
+
+  * 'GUI -> wm'
+
+    Display the user interface via our window manager.
+
+  * 'Report (shape) -> wm'
+
+    Allow the application to tell the window manager about customized
+    pointer shapes.
+
+  * 'Report (clipboard) -> wm'
+
+    Allow the application to paste content via the window manager to the
+    clipboard.
+
+  * 'ROM (clipboard) -> wm'
+
+    Allow the application to paste content to the clipboard.
+    For more information about the clipboard mechanism, let me refer
+    you to [https://genodians.org/nfeske/2019-07-03-copy-paste - this]
+    dedicated article.
+
+When switching to the desktop via F12, you can position, move, and stack
+the two windows as usual. The resizing of the backdrop window lags a bit
+because the backdrop program reloads and re-composes the output from a bunch
+of PNG image on each size change. That should not distract us too much.
+
+[image two_windows]
+
+
+Observing and editing the data model behind the window layout
+-------------------------------------------------------------
+
+Now, let's get on to the fun part. Use the text editor to open the file
+_/edit/rules_. The XML data that you are seeing is the data model
+of the window layouter. Remember how we assigned the "recall" file
+system of the layouter component to the "used file system"? That is
+how the "rules" file ended up in the file system. To see what all that
+means, change the 'xpos' attribute of the '<assign>' node of "qt5_textedit ->
+example.html" (the current window) to another value and press 'Control-S' for
+saving the file. The change takes immediate effect! The window just moved
+to the new position. As another test, add the attribute 'maximized="yes"'
+to the '<assign>' node of the "sticks_blue_backdrop" node and see magic
+happen.
+
+This experiment should strike us. We can indeed manage window layouts by
+the means of text manipulation and file operations. Think about backing
+up your current window layout, restoring it at a later point.
+
+
+Replacing the decorator on the fly
+----------------------------------
+
+You can remove the "motif decorator" component via the components view
+of Sculpt's Leitzentrale. The window layout stays in tact but the window
+decorations disappear. Now you can add the "themed decorator" via the "+" menu
+and wire it to the window manager analogously to what we did earlier for the
+"motif decorator". Voila! We have just replaced the renderer for the window
+decorations on the fly. This is not just a gimmick. It allows us to restart
+the decorator on demand, e.g., if a bug of a (potentially complex) decorator
+hits us, we can spawn a fresh one without disrupting the window layout and the
+applications.
+
+
+The recall file-system entering the picture
+-------------------------------------------
+
+We have already seen how the _rules_ file captures the state of the window
+layout on a file system. Upon the next start of the window layouter, it can
+thereby recall its previous state. In Sculpt, the idea of allowing components
+to recall their state is somewhat formalized by the so-called recall fs, which
+you can find right at the top level of the "+" menu.
+
+The recall fs works like a 'chroot' mechanism but it hands out a different sub
+directory based on the client's label. By connecting the "recall" file system
+route of the window layouter to the recall-fs component, the _rules_ file will
+automatically appear at _/recall/window_layouter/recall/rules_. If using a
+persistent file system (as opposed to the RAM file system), the rules - and
+thereby the window layout - will be preserved across reboots.
+
+
