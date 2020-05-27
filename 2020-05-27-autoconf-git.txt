@@ -1,0 +1,214 @@
+
+          Autoconf support is landing in Goa, Git comes to life
+
+I'd like to share a few recent developments around
+[https://genodians.org/nfeske/2020-03-02-goa-update - Goa], which
+is a new tool for porting, building, and packaging Genode components.
+With autoconf, a third build system enters the picture, which, in turn,
+paves the ground for bringing software like Git over to Genode.
+
+In the context of Genode's Noux runtime, we already learned the
+[https://github.com/genodelabs/genode/blob/master/repos/ports/mk/gnu_build.mk - magic spells]
+needed for taming the GNU build system to spit out executable binaries that
+are compatible with Genode. Since I created the first version of Goa, I was
+looking forward to apply this wizardry to Goa.
+The plan of bringing Git to Genode as stated on our official
+[https://genode.org/about/road-map#May_-_Release_20.05 - road map] gave me the
+perfect excuse to explore this direction.
+
+You can find this line of development on my
+[https://github.com/nfeske/goa/commits/autoconf - autoconf] branch of Goa.
+When having Goa already installed, you can use the following command
+for updating and switching to this branch:
+! goa update-goa autoconf
+At the time being, I'm leaving Goa's master branch consistent with Sculpt 20.02.
+You can switch back to the master branch via:
+! goa update-goa master
+
+
+Acquainting Goa with the Genode source tree
+-------------------------------------------
+
+Since there is tight loop between improving Goa, the porting of Git, and
+addressing edge cases in Genode's libc, I have to switch back and forth
+between working in the Genode source tree and the Goa environment. The latter
+is designed to be completely decoupled from the Genode source tree though. So
+in theory, a change of the libc would require one to first export a new libc
+version from the Genode source tree, and importing the new version into the
+Goa environment for testing the change. This process is cumbersome.
+Fortunately, Goa comes to the rescue with two features hidden in its
+documentation:
+! goa help config
+
+By adding two settings in the Goa configuration (.goarc), the Goa environment
+can be closely connected to the Genode source tree.
+
+:'set depot_dir ~/src/genode/depot':
+
+  The 'depot_dir' variable holds a path to the depot used by Goa. By pointing
+  it to the _genode/depot/_, we can share one depot between Genode's regular
+  depot tools and Goa. So when creating a package from the Genode source tree,
+  it becomes implicitly available to Goa.
+
+:'set versions_from_genode_dir ~/src/genode':
+
+  If the 'versions_from_genode_dir' variable holds the path to a Genode source
+  tree, Goa obtains its package versioning information directly from the
+  depot recipes as present in the Genode source tree. That is, when creating
+  a new version of a depot archive (e.g., when routinely using the
+  '--depot-auto-update' feature of Genode's build system), the most current
+  version of a depot archive is automatically picked up by Goa.
+
+The combination of both features allows one to develop low-level Genode
+infrastructure (think of the libc) and high-level application software (like
+Git) in tandem.
+
+
+Teaching Goa how to autoconf
+----------------------------
+
+Goa is designed for supporting multiple build systems. It selects the build
+system based on heuristics, namely certain files being present in the project
+directory. I
+[https://github.com/nfeske/goa/blob/autoconf/bin/goa#L466 - added] the rule
+that the presence of a file named _configure_ activates the use of autoconf.
+With this decision taken, Goa includes the
+[https://github.com/nfeske/goa/blob/autoconf/share/goa/lib/build/autoconf.tcl - autoconf-specific]
+functionality.
+When porting software, one typically needs to explicitly disable or enable
+certain features by specifying arguments to the 'configure' script.
+To allow for such tweaks, a Goa project directory can host a file called
+'configure_args', which lists the arguments whereby each argument is put on
+a separate line. While enhancing Goa in this respect, I also added the notions
+of corresponding 'make_args' and 'cmake_args' files that are evaluated when
+using Make and CMake respectively.
+
+
+The port of Git
+---------------
+
+I conduct the actual porting work of Git in my
+[https://github.com/nfeske/goa-playground - goa-playground] repository,
+specifically, the [https://github.com/nfeske/goa-playground/commits/git - git]
+topic branch. The following bits are worth noting:
+
+* I split the porting work and the testing work into two Goa projects.
+  The Goa project at _commands/git/_ contains the port whereas the
+  _test/unix-git/_ project contains an executable test scenario that is
+  based on the Unix scenario built via the
+  [http://genodians.org/nfeske/2020-03-02-goa-update - tutorial].
+  Such a split is beneficial because it allows the publishing
+  of both parts independent from each other. In contrast, if I added
+  the interactive unix-git test right into the _commands/git/_ project,
+  the _git_ project would depend on all the ingredients of the interactive
+  Unix scenario.
+
+* Git requires a few patches, which I put at the _patches/_ subdirectory.
+  Each patch is listed in the
+  [https://github.com/nfeske/goa-playground/blob/git/commands/git/import - import]
+  file.
+  Goa provides convenient assistance for managing such patches. In particular,
+  one can edit the imported source code directly in the _src/_ directory
+  and review those changes via
+  ! goa diff
+  The displayed patch can be conveniently redirected into a patch file.
+
+  Most of the patches are fairly minor. E.g., since Genode does not
+  provide file-mode bits, 'chmod' is not defined. Similar story for
+  'getpgid'. The most important change is the discharge of the 'uname'
+  based make magic that is unconditionally employed by Git's build system.
+  This renders the attempt to cross-compile Git for Genode futile.
+  Fortunately, the heuristics can be side-stepped by commenting-out the
+  offending line
+  ! include config.mak.uname
+
+* Getting the configure-and-make process to work is an iterative and -
+  at times - exhausting process. Seeing configure fail, reviewing the
+  config.log, trying to grasp the corresponding part of the 'configure'
+  script, finding a knob to press to force our will onto the tool.
+  The result of this mind-crushing process can be expressed in just a few
+  lines, now captured in the _configure_args_ file:
+  !ac_cv_fread_reads_directories=no
+  !ac_cv_snprintf_returns_bogus=no
+  !ac_cv_lib_resolv_inet_ntop=yes
+  !ac_cv_lib_curl_curl_global_init=yes
+  !ac_cv_member_struct_stat_st_mtimespec_tv_nsec=no
+
+  The actual build stage needed some convincing as well, which is now
+  preserved in the form of the _make_args_ file:
+  !HAVE_BSD_SYSCTL=
+  !NO_IPV6=
+  !EXTLIBS=
+  !NO_INSTALL_HARDLINKS=1
+  !NO_TRUSTABLE_FILEMODE=1
+  !OBJECT_CREATION_USES_RENAMES=1
+  !all
+  !strip
+  !install
+
+  Behind most of these lines, there is a story. But I figure that some stories
+  are best kept secret.
+
+
+Current state
+-------------
+
+The current version of the Git port can be compiled and executed.
+To use Git from the interactive Unix scenario, I had to set a few environment
+variables.
+! <env key="PAGER"         value="cat" />
+! <env key="EDITOR"        value="/bin/vim" />
+! <env key="GIT_EXEC_PATH" value="/libexec/git-core" />
+
+By default, Git uses 'less' as a pager, which does not work yet.
+Using 'cat' as a work-around does the trick.
+Well, using 'vim' as default editor is a no-brainer, isn't it?
+The 'GIT_EXEC_PATH' is one of those stories.
+
+With those precautions, I was able successfully execute commands
+like the following:
+
+!git config --global user.email "a@b.cd"
+!git config --global user.name "Test User"
+!
+!cd $HOME
+!
+!echo --- create new repository
+!git init
+!
+!echo --- perform two commits
+!echo first > test.txt
+!git add test.txt
+!git commit test.txt -m "first commit"
+!echo second > test.txt
+!git commit test.txt -m "second commit"
+!git log
+!
+!echo --- create and modify topic branch
+!git checkout -b topic HEAD
+!git reset --hard HEAD^
+!git log
+!echo complementary > another.txt
+!git add another.txt
+!git commit another.txt -m "another text"
+!git log
+!
+!echo --- rebase no-op
+!git rebase HEAD
+!git log
+
+The next steps
+--------------
+
+For productive use of Git, at least two problems wait to be solved.
+
+* Cloning repositories over the network. Even though I'm already able
+  to use networking (using curl, ssh) and Christian's
+  [https://genodians.org/chelmuth/2020-03-16-lets-encrypt - recently added]
+  networking support for Goa, the cloning still gets stuck mid way.
+
+* Git's 'rebase -i' command get stuck somewhere.
+
+These remaining issues notwithstanding, I'm already quite happy of how smooth
+the porting work for such a non-trivial piece of software went.
+
