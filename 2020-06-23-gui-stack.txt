@@ -1,0 +1,192 @@
+
+                    Re-stacking the GUI stack
+
+
+As I am currently right in the middle of a far-reaching rework of Genode's
+low-level GUI stack, I'd like to share a bit of background behind this work:
+the Why, the What, and the How.
+
+
+Current state
+-------------
+
+The current incarnation of Genode's low-level GUI-related interfaces is almost
+identical to the very first version that we originally created in 2006.
+Genode has a very strong asymmetric notion of the
+[https://genode.org/documentation/genode-foundations/20.05/architecture/Recursive_system_structure.html#Client-server_relationship - relationship]
+between client and server components. In this relationship, the client depends
+on the server but the server does not depend on the client.
+
+At the lowest level, the framebuffer driver and input driver(s) were
+envisioned as servers that provide the _Framebuffer_ and _Input_ session
+interfaces to higher-level GUI components. From our former academic view, this
+felt natural because those drivers _provide_ _resources_ to other components.
+Provide... serve... server! The nitpicker GUI server uses those low-level
+services to implement a higher level service that ultimately allows for the
+multiplexing of graphics and input.
+[https://genode.org/documentation/genode-foundations/20.05/components/Common_session_interfaces.html#Nitpicker_GUI - Nitpicker]
+virtualizes the low-level framebuffer and input interfaces while supplementing
+the notions of visible views and input focus. Such a system looks as follows:
+
+[image nitpicker_orig]
+
+The drivers and the nitpicker GUI server are displayed in red because they are
+servers. The GUI applications at the right are nitpicker clients. Nitpicker,
+in turn, is a client of the framebuffer and input drivers.
+
+The client interface of the nitpicker GUI server is success story. A few
+[https://genode.org/documentation/release-notes/15.11#GUI_stack - evolutionary tweaks]
+notwithstanding, the original design scales up to the windowed working
+environment of Sculpt OS while retaining the tiny complexity of the nitpicker
+GUI server.
+
+However, the approach of modelling the framebuffer and input drivers as
+servers is a dead end, for the following reasons.
+
+* Drivers are sometimes extremely complex. When looking at the complexity of
+  the Intel framebuffer driver (ported from the Linux kernel) for example, it
+  feels foolish to trust that it won't fail. Because the nitpicker GUI server
+  depends on the liveliness of the driver, however, the well-being of the
+  driver is on the critical path for the entire GUI stack and all GUI
+  applications.
+
+* It is impossible to transparently restart or replace the driver at runtime
+  without also restarting the GUI stack and - transitively - all GUI
+  applications. This is because the nitpicker GUI server is connected as a
+  client to the drivers. The connections are like a life supply for the GUI
+  server. Cutting those would ultimately kill the GUI server.
+
+* Adding secondary displays is rather difficult because this would require
+  nitpicker to know what framebuffer servers are out there and to request
+  multiple framebuffer connections. Adding such a protocol would inflate
+  the complexity of nitpicker.
+
+
+Inverting interfaces
+--------------------
+
+To overcome these limitations, we must break the dependency of the GUI
+server from the drivers, like illustrated here:
+
+[image nitpicker_next]
+
+In this scenario, the GUI server no longer _uses_ the drivers, but the drivers
+use the GUI server. The relationship is reversed. Only the nitpicker GUI
+server remains red. Of course, the drivers cannot talk to nitpicker GUI
+server via nitpicker's regular client interface. Instead, two new interfaces
+enter the picture:
+
+:The _Capture_ session interface: is like the inverse of the original
+  _Framebuffer_ session interface. It allows a client to obtain pixel data
+  from the server. From the GUI server's perspective, a framebuffer driver
+  is like a frame capturing device - which it is.
+
+:The _Event_ session interface: is like the inverse of the original
+  _Input_ session interface. In contrast to a input session, which allows
+  a client to obtain input events, an event session allows a client to
+  induce input events. Nitpicker is an event server that consumes the input
+  events from the driver(s).
+
+The benefits of this approach are manifold:
+
+* The low-complexity GUI server remains as the only component that must never
+  fail, which makes the GUI stack much more resilient compared to today.
+
+* Since the nitpicker GUI server no longer depends on the drivers, it can be
+  started before the drivers are running, speeding up the boot time of
+  graphical scenarios. In scenarios with rigid power management, we can remove
+  the graphics driver - and switch off the graphics device - all while the GUI
+  server and all GUI applications stay intact.
+
+* Drivers can be restarted anytime. From the perspective of the nitpicker
+  GUI server, this looks like a client disconnect and connect. Drivers
+  can also be replaced at runtime, e.g., swapping out the VESA and Intel
+  drivers.
+
+* Connecting more than one driver to the nitpicker GUI server becomes
+  conceptually simple. This clears the path towards multi-head support.
+
+* The new capture session interface of the nitpicker GUI server would be
+  the right hook for implementing screenshot/screencast applications, or a
+  remote desktop server.
+
+* Analogously to capture devices, input devices can enter and leave the
+  system at any time without disruption, which will allow for the fine-grained
+  management of USB HID devices. Think of plugging a new HID device to
+  your Sculpt system. A new USB device would show up.
+  The user can deploy the matching HID driver with the option of routing the
+  event session of the driver to the system GUI server. Isn't that wonderful?
+
+What is the downside? _It is a lot of work!_ This leads us the following
+section.
+
+
+The plan
+--------
+
+Turning the low-level session interfaces upside down is an invasive operation
+that must be carried out in several steps, each yielding an intermediate
+consistent state.
+
+# We start off with some low-risk *cosmetic* changes, namely the renaming
+  of the "Nitpicker" session interface to "Gui" session. The strange
+  branding of the session interface after a particular implementation is a
+  relic from the early days. This
+  [https://github.com/genodelabs/genode/issues/3778 - change] has already
+  entered Genode's master branch.
+
+# Consistently use *32-bit RGB* as pixel format by all drivers and
+  applications. This is a long-standing feature request that eliminates
+  the need for color-space conversions and generally improves the output
+  quality.
+  It is quite labor-intensive because it requires me testing many
+  different hardware platforms covering the drivers vesa_fb_drv, fb_sdl,
+  intel_fb_drv, imx53_fb_drv, imx8_fb_drv, rpi_fb_drv, boot_fb_drv,
+  omap4_fb_drv, exynos5_fb_drv.
+  This [https://github.com/genodelabs/genode/issues/3784 - change] has already
+  progressed well.
+
+# Introducing the new *Capture* session *interface*.
+
+# Implementing the *capture service* in the nitpicker GUI server.
+
+# Introduce a *nitpicker* option to choose the framebuffer *back end* between
+  the use of a requested framebuffer session (as done today), the use of a
+  capture client for the pixel output, or the use of another GUI server
+  (for stacking multiple instance of nitpicker).
+
+# Turn "Framebuffer" *drivers* into "Capture" clients, covering all the
+  drivers mentioned above. Shoveling code. Adjusting all existing
+  scenarios to use nitpicker's capture service.
+
+# *Pruning* the remaining use of the *framebuffer client* interface.
+  In fact, when done, I want to remove the 'Framebuffer::Connection'
+  completely. This will require the reworking of the terminal, MESA back end,
+  several tests, and the liquid_framebuffer. In the process, I hope to largely
+  eliminate the use cases of the nit_fb (now called gui_fb) component so
+  that this component can be removed in the end.
+
+# *Turning* a few other *framebuffer clients* into "Capture" servers, in
+  particular test-framebuffer, fb_bench, and test-driver_manager.
+
+# *Removal* of the "Framebuffer" *session interface*, retaining the interface
+  merely as a part of the GUI session.
+
+# Introducing the new *Event* session *interface* and adding its implementation
+  to the nitpicker GUI server.
+
+# Adding a new *event_filter component* taking the place of the input_filter.
+
+# With the structural changes done, it would be time for optimizations.
+  As a prerequisite for tear-free animations, the *frame buffering* will be
+  moved from the clients into the nitpicker GUI server. At first, this will be
+  transparent to most clients. The subsequent removal of client-side buffering
+  is second independent step. As another optimization, I plan to go though all
+  places that employed the dithering of pixels.
+
+Of those topics, the rework of the framebuffer drivers is certainly the most
+elaborate one. I'm considering to drop the Exynos5 and OMAP4 drivers.
+Even though I strive for replacing the input session interface by the new
+event session interface, the scope of the task of reworking the input drivers
+is not yet completely tangible to me.
+
