@@ -1,0 +1,185 @@
+
+
+                    What's new in Sculpt OS 20.08
+
+The version 20.08 of Sculpt OS has just become available. Let's have a look at
+the most interesting changes and new features.
+
+Before we start, download the new Sculpt OS image while it's hot:
+
+:Sculpt download page:
+
+  [https://genode.org/download/sculpt]
+
+:Up-to-date documentation:
+
+  [https://genode.org/documentation/articles/sculpt-20-08]
+
+
+Falkon web browser
+------------------
+
+Functionality-wise, the most interesting addition is a ready-to-install
+package for the Falkon web browser. You can find the browser in the depot
+of *cproc:*
+
+# Add the window manager as described by the Sculpt documentation or - if you
+  prefer the luxury variant - by following
+  [https://genodians.org/nfeske/2020-03-27-window-management - this article].
+
+# Obtain the depot index of "cproc" via the "+" menu.
+
+  'Depot... -> Selection... -> cproc'
+
+# Add the Falkon web browser via the "+" menu.
+
+  'Depot... -> cproc... -> Tools... -> falkon'
+
+  Connect it as follows:
+
+  * 'File system (downloads) -> ram fs'
+
+    This is the location where the browser will put files downloaded from the
+    internet. Apart from this location, the browser won't be allowed to store
+    any information (cookies, caches) persistently on your system. This is a
+    feature because we cannot help but distrust a monstrosity like Chromium.
+    By selecting the RAM file system as download location, the downloaded
+    files will also vanish upon reboot.
+
+  * 'GUI -> themed wm'
+
+    This is the GUI server used for presenting the browser windows.
+
+  * 'Network -> nic router'
+
+    It goes without saying that the browser requires network access. So we
+    connect it to Sculpt's virtual NAT routing component.
+
+  * 'Report (falkon shape) -> themed wm'
+
+    This allows the browser to change the mouse-pointer shape according the
+    hovered context.
+
+  * 'Report (clipboard) -> themed wm'
+
+    By directing clipboard reports to the window manager, we can copy text
+    from the browser to the global clipboard. You can find more information
+    about the clipboard mechanism in
+    [https://genodians.org/nfeske/2019-07-03-copy-paste - this dedicated article].
+
+  * 'ROM (clipboard) -> global clipboard'
+
+    Vice versa, this allows the browser to read content from the global
+    clipboard.
+
+  * 'Real-time clock -> system time'
+
+The browser is based on the Chromium web engine. Thereby, it supports the
+"modern" web as expected by most users. Its user interface loosely resembles
+Firefox. E.g., it features the usual hamburger menu on the right, and supports
+the most common keyboard shortcuts.
+
+[image haentzschelstiege]
+
+Granted, this initial version of the browser is not yet fit for everyday use.
+It will take us continues effort to improve the performance to the level
+expected by most users, to reduce its memory demand, and to prevent memory
+leaks. We will get there. For now, please regard the browser as work in
+progress. Should you find it frozen, have a look at Sculpt's log display. The
+most likely cause of problems is the depletion of the memory quota.
+
+[image falkon_out_of_ram]
+
+In this situation, a new feature of Sculpt comes to the rescue:
+
+
+Restarting components via mouse click
+-------------------------------------
+
+When selecting a component in Sculpt's component graph, you will find a new
+"Restart" button in addition to the traditional "Remove" button. This button
+resets the component to its original state.
+
+[image falkon_restart]
+
+
+Assigning components to CPUs
+----------------------------
+
+The previous version of Sculpt already featured a
+[https://genodians.org/alex-ab/2020-03-18-sculpt-affinity - manual way]
+of restricting components to a subset of CPUs. This becomes handy in
+situations where one wants to run two virtual machines largely decoupled from
+each other, or when hosting latency-critical workloads - like audio -
+alongside heavy programs. With the new version of Sculpt, the CPU assignment
+of each component can be interactively configured.
+
+[image sculpt_20_08_affinity]
+
+The configuration dialog shows a matrix of CPU cores where the x-axis denotes
+the physical cores and the y-axis the hyperthreads. By default, all available
+CPU cores are selected. You can toggle the nodes by clicking on them. The
+dialog ensures that the selection is always a rectangular area. So one click
+may affect nodes other than only the clicked one. This Tic-Tac-Toe-like
+behavior may feel a bit eccentric at first, but it is super convenient.
+
+
+Changing VESA screen resolutions on the fly
+-------------------------------------------
+
+When running Sculpt in a virtual machine like VirtualBox, Sculpt relies on the
+VESA framebuffer driver. In previous versions, the screen resolution was fixed
+to 1024 x 768. The new version overcomes this limitation. You can change the
+resolution to another VESA mode - i.e., 1280 x 768 - by editing the width and
+height attributes of the fb_drv configuration on the config file system.
+
+
+The event filter has replaced the input filter
+----------------------------------------------
+
+As a consequence of Genode's
+[https://genodians.org/nfeske/2020-06-23-gui-stack - redesigned GUI stack],
+the former input-filter component has been replaced by the new event filter
+component. It is now configured via _/config/event_filter_ file.
+
+The configuration of the filter chain remains almost the same. Only the
+declaration of the top-level '<input>' nodes is no longer needed. Instead, the
+configuration must specify '<policy>' nodes, which define the mapping of
+"Event" clients (event sources) to the inputs used in the filter chain.
+
+
+The noux runtime is no more
+---------------------------
+
+Earlier versions of Sculpt relied on the so-called noux runtime for executing
+Unix-like subsystems. The new version does no longer require noux because
+Genode's regular C runtime covers the needs of Unix-like subsystems now. The
+former "noux-system" package has been replaced by a new "system shell"
+package. Its purpose and feature set is unchanged.
+
+
+Further improvements
+--------------------
+
+There are the following noteworthy improvements under the hood:
+
+* The entire GUI stack from the drivers, over the low-level GUI server, the
+  window manager, up to the applications and virtual machine monitors uses 32
+  bits per pixel now. This change generally results in *crisper graphics*. By
+  eliminating intermediate color-space conversions and dithering, there are
+  also welcome *performance improvements* all over the place.
+
+* The redesigned GUI stack has has *reduced the latency* of user input, which
+  makes the user interface more snappy and direct.
+
+* Changes of the font size in the top-left "Settings" menu take immediate
+  effect without the need for restarting GUI components.
+
+* Unsupported partition schemes are now gracefully handled. Sculpt utilizes
+  Genode's heartbeat-monitoring mechanism to detect the failure of part_block
+  instances during storage discovery. If part_block gets stuck, the device is
+  released and can thereby be accessed at the whole-device level, e.g., by
+  assigning it to a virtual machine.
+
+I wish you a lot of fun with the new version of Sculpt OS! 
+
