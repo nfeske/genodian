@@ -475,4 +475,6 @@ development workflow, it is better to *skip the USB initialization*. This
 can be done by changing the 'preboot' environment variable from "usb start" to
 nothing, and of course make the change persistent via the 'saveenv' command.
 
-
+The next step would be using this boot mechanism to load and run custom code
+that performs primitive
+[https://genodians.org/nfeske/2020-12-17-pine-fun-serial - serial output...]
