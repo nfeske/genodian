@@ -942,5 +942,5 @@ Second, in contrast to the archaic experiments with the bare-metal serial
 output, which did not even use a stack, we can now enjoy the comfort
 of Genode's C++ runtime. We don't feel like living in a cave any longer.
 Finally, we got a meaningful error message, which is an unmistakable direction
-sign for our next steps.
+sign for [https:2021-02-11-pine-fun-debugging - our next steps].
 
