@@ -777,7 +777,7 @@ predictably:
 !     COMPILE  core_region_map.o
 ! In file included from /.../repos/allwinner/src/core/board/pine_a64lts/board.h:17,
 !                  from /.../repos/base-hw/src/core/platform.h:37,
-!                  from /.../repos/base-hw//src/core/core_region_map.cc:18:
+!                  from /.../repos/base-hw/src/core/core_region_map.cc:18:
 ! /.../repos/allwinner/src/include/hw/spec/arm_64/pine_a64lts_board.h:17:10:
 !            fatal error: drivers/uart/ns16550.h: No such file or directory
 !  #include <drivers/uart/ns16550.h>
@@ -836,8 +836,8 @@ look at the compiler and linker errors, fix them, and repeat.
 ! $ make run/log KERNEL=hw BOARD=pine_a64lts
 !     ...
 !     COMPILE  bootstrap/spec/arm/gicv2.o
-! /.../repos/base-hw//src/bootstrap/spec/arm/gicv2.cc: In constructor ‘Hw::Gicv2::Gicv2()’:
-! /.../repos/base-hw//src/bootstrap/spec/arm/gicv2.cc:23:28: error: ‘NON_SECURE’ is not a member of ‘Board’
+! /.../repos/base-hw/src/bootstrap/spec/arm/gicv2.cc: In constructor ‘Hw::Gicv2::Gicv2()’:
+! /.../repos/base-hw/src/bootstrap/spec/arm/gicv2.cc:23:28: error: ‘NON_SECURE’ is not a member of ‘Board’
 !   bool use_group_1 = Board::NON_SECURE &&
 !                             ^~~~~~~~~~
 
@@ -930,7 +930,7 @@ Testing the system image on the board comes down to the following few steps.
 ! Starting kernel ...
 !
 ! Error: Assertion failed: id < _count && _cpus[id].constructed()
-! Error:   File: /.../repos/base-hw//src/core/kernel/cpu.cc:205
+! Error:   File: /.../repos/base-hw/src/core/kernel/cpu.cc:205
 ! Error:   Function: Kernel::Cpu& Kernel::Cpu_pool::cpu(unsigned int)
 
 The excitement is real! That's the first life sign of Genode's kernel!

@@ -12,7 +12,7 @@ Remember, at the end of the
 we were greeted with the first life sign of the kernel:
 
 ! Error: Assertion failed: id < _count && _cpus[id].constructed()
-! Error:   File: /.../repos/base-hw//src/core/kernel/cpu.cc:205
+! Error:   File: /.../repos/base-hw/src/core/kernel/cpu.cc:205
 ! Error:   Function: Kernel::Cpu& Kernel::Cpu_pool::cpu(unsigned int)
 
 This raises the questions: What is the trouble about? How did we get there?
@@ -112,7 +112,7 @@ which expands to the name of the surrounding function.
 After rebooting the board with the instrumentations in place, we see the
 origin of the call:
 
-! /.../repos/base-hw//src/core/kernel/kernel.cc:25
+! /.../repos/base-hw/src/core/kernel/kernel.cc:25
 
 A look at the surrounding code reveals that the function call originates from
 a function called 'kernel':
@@ -217,12 +217,12 @@ which leaves me impressed. We can simply search for our address
 command and end up at the following section of output:
 
 ! kernel():
-! /.../base-hw//src/core/kernel/kernel.cc:25
+! /.../base-hw/src/core/kernel/kernel.cc:25
 ! ffffffc000058718:       12001c21        and     w1, w1, #0xff
 ! ffffffc00005871c:       97fff8e3        bl      ffffffc000056aa8 <_ZN6Kernel8Cpu
 ! _pool3cpuEj>
 ! ffffffc000058720:       aa0003f4        mov     x20, x0
-! /.../base-hw//src/core/kernel/kernel.cc:29
+! /.../base-hw/src/core/kernel/kernel.cc:29
 !         Cpu_job * new_job;
 
 The source location _kernel.cc_ line 25 looks familiar.
@@ -232,7 +232,7 @@ the *addr2line* utility can be used to streamline the lookup of a source-code
 location by a given instruction address.
 
 ! $ genode-aarch64-addr2line -e var/run/log.core 0xffffffc000058720
-! /.../base-hw//src/core/kernel/kernel.cc:25
+! /.../base-hw/src/core/kernel/kernel.cc:25
 
 This is fast and convenient. But sometimes, in particular when code is
 excessively inlined, the contextual information given by the objdump output
@@ -302,11 +302,11 @@ output directly into it and get the following result:
 ! 0xffffffc0000568e0
 ! 0xffffffc000056a60
 ! 0xffffffc000057e44
-! /.../base-hw//src/core/kernel/kernel.cc:25
+! /.../base-hw/src/core/kernel/kernel.cc:25
 ! :?
 ! /.../base-hw/src/core/spec/arm/virtualization/gicv2.h:22
 ! /.../base/include/util/reconstructible.h:56
-! /.../base-hw//src/core/kernel/init.cc:64 (discriminator 1)
+! /.../base-hw/src/core/kernel/init.cc:64 (discriminator 1)
 
 We can spot both of the familiar locations _kernel.cc_ line 25 and _init.cc_
 line 64.
