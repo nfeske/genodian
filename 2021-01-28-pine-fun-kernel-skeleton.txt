@@ -481,8 +481,8 @@ follows.
 !  Program core/hw/core_hw_pine_a64lts
 
 Similar to the build of bootstrap, we can find the result at the corresponding
-subdirectory, here _core/hw/_. We find a single object file named
-_core-hw-pine_a64lts.o_ along with a stripped version of this file.
+subdirectory, here _core/hw/_. We find a single archive file named
+_core-hw-pine_a64lts.a_ along with a stripped version of this file.
 
 Next up, we are going to build a *system image* that contains both core and
 bootstrap.
@@ -873,7 +873,7 @@ _lib/mk/spec/arm_v8/bootstrap-hw-pine_a64lts.mk_.
 
 Next try. This time, we get a link error:
 
-! /.../aarch64-none-elf/bin/ld: debug/core-hw-pine_a64lts.o: in function `Board::Pic::Pic()':
+! /.../aarch64-none-elf/bin/ld: debug/core-hw-pine_a64lts.a(cpu.o): in function `Board::Pic::Pic()':
 ! /.../repos/base-hw/src/core/spec/arm/virtualization/gicv2.h:22:
 !     undefined reference to `Board::Pic::Gich::Gich()'
 
