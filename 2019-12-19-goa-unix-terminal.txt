@@ -121,13 +121,13 @@ a GUI service as an additional requirement by adding the following
 node inside the <runtime> node:
 
 ! <requires>
-!   <nitpicker/>
+!   <gui/>
 !   <timer/>
 ! </requires>
 
 When Goa processes the 'goa run' command, it evaluates this information.
-The <nitpicker> node tells Goa that the scenario will request a so-called
-"Nitpicker" session to a GUI server. When running the scenario on Linux,
+The <gui> node tells Goa that the scenario will request a
+session to a GUI server. When running the scenario on Linux,
 Goa will automatically integrate the components needed for such a GUI server.
 This includes a pseudo graphics driver, a pseudo input driver, and the
 [https://github.com/genodelabs/genode/tree/master/repos/os/src/server/nitpicker - nitpicker GUI server].
@@ -140,24 +140,14 @@ you can see a small mouse pointer. If you are curious how the system the
 GUI stack is assembled in detail, please have a look at _var/run/config_.
 But from the perspective of our Unix scenario, these exact details are not
 of interest. The only important point is that our scenario is now officially
-able to request a "Nitpicker" and "Timer" service from the underlying
+able to request a "Gui" and "Timer" service from the underlying
 system.
 
 With these preconditions in place, we can start a graphical terminal
 in our _unix.config_ by adding the following two <start> nodes:
 
-! <start name="nit_fb" caps="110">
-!   <resource name="RAM" quantum="2M"/>
-!   <provides>
-!      <service name="Framebuffer"/>
-!      <service name="Input"/>
-!   </provides>
-!   <config/>
-!   <route> <any-service> <parent/> </any-service> </route>
-! </start>
-!
 ! <start name="terminal" caps="110">
-!   <resource name="RAM" quantum="2M"/>
+!   <resource name="RAM" quantum="8M"/>
 !   <provides> <service name="Terminal"/> </provides>
 !   <route>
 !     <service name="ROM" label="config">
@@ -168,11 +158,9 @@ in our _unix.config_ by adding the following two <start> nodes:
 !   </route>
 ! </start>
 
-The "nit_fb" component is an adapter. It requests a nitpicker session (routed
-to the parent) and, in turn, provides the low-level "Input" and "Framebuffer"
-services. The
+The
 [https://github.com/genodelabs/genode/tree/master/repos/gems/src/server/terminal - "terminal"]
-uses these services to create a graphical terminal and provides the textual
+uses a GUI service to create a graphical terminal and provides the textual
 input and output in the form of a "Terminal" service. In the routing rules of
 the terminal, you can see that the terminal's configuration is fetched from a
 dedicated ROM module called "terminal.config". We have no such ROM module
@@ -180,23 +168,20 @@ defined yet. However, let's still give it try:
 
 ! [init -> unix] Error: terminal: environment ROM session denied (label="terminal" ...)
 ! ...
-! [init -> unix] Error: nit_fb: environment ROM session denied (label="nit_fb" ...)
 
-That's not surprising as we have neither added 'nit_fb' and 'terminal' to our
+That's not surprising as we have not added 'terminal' to our
 _archives_ nor have we stated the <rom> modules in the runtime file's <content>.
 Let's do this now. While we are at it, let's also add a <rom> node for the
 "terminal.config" ROM.
 
-The following two lines must be added to _pkg/unix/archives_
+The following line must be added to _pkg/unix/archives_
 
-! nfeske/src/nit_fb
 ! nfeske/src/terminal
 
-The following three lines must be added to the runtime file's <content>:
+The following two lines must be added to the runtime file's <content>:
 
 ! <content>
 !   ...
-!   <rom label="nit_fb"/>
 !   <rom label="terminal"/>
 !   <rom label="terminal.config"/>
 ! </content>
@@ -206,7 +191,7 @@ with two new ones. Let's call it progress:
 
 ! [init -> unix -> terminal] Error: Could not open ROM session for "config"
 ! ...
-! [init -> unix] Warning: nit_fb: no route to service "Nitpicker"
+! [init -> unix] Warning: terminal: lookup for service "Gui" failed
 
 The first error is easy to explain. We have configured the "terminal"
 start node to fetch its configuration from a ROM called _terminal.config_
@@ -215,29 +200,27 @@ _raw/terminal.config_ with an empty <config> node:
 
 ! <config/>
 
-The second error tells us that there is no way for "nit_fb" to reach a
-"Nitpicker" service. Let's take a look at the <route> rules for this
-component:
+The second error tells us that there is no way for the "terminal" to reach a
+"Gui" service. Let's take a look at the <route> rules for this component:
 
 ! <route> <any-service> <parent/> </any-service> </route>
 
 This rule says that all service requests should directly go towards the
 surrounding Genode system, towards the parent of the component tree.
 However, in the <parent-provides> declaration at the beginning of the
-init <config> a "Nitpicker" service is nowhere to be found. Hence, init
-refuses to ask the outside world for a "Nitpicker" service on behalf of
-its child nit_fb. Let us enhance the <parent-provides> node with an entry
-for the nitpicker service:
+init <config> a "Gui" service is nowhere to be found. Hence, init
+refuses to ask the outside world for a "Gui" service on behalf of
+its child terminal. Let us enhance the <parent-provides> node with an entry
+for the GUI service:
 
 ! <parent-provides>
 !   ...
-!   <service name="Nitpicker"/>
+!   <service name="Gui"/>
 ! </parent-provides>
 
-Now, when trying 'goa run' for the next time, we see that something has
-changed. The formerly greenish background of the graphical window has
-turned black. Good news! The black is the default background color of
-the terminal. However, as so often, the good news are accompanied with
+Now, when trying 'goa run' for the next time, we see that the complaint about
+the "Gui" service has vanished. Good news!
+However, as so often, the good news are accompanied with
 less good news, as seen in the log:
 
 ! [init -> unix -> terminal] Error: Uncaught exception of type

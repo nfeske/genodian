@@ -193,8 +193,8 @@ archives and signatures. For example,
 
 ! $ find var/public/nfeske/bin/x86_64/terminal
 ! var/public/nfeske/bin/x86_64/terminal
-! var/public/nfeske/bin/x86_64/terminal/2020-02-27.tar.xz.sig
-! var/public/nfeske/bin/x86_64/terminal/2020-02-27.tar.xz
+! var/public/nfeske/bin/x86_64/terminal/2021-02-22.tar.xz.sig
+! var/public/nfeske/bin/x86_64/terminal/2021-02-22.tar.xz
 
 
 The 'sig' file is the signature that I (Norman) created via my private PGP
@@ -242,18 +242,18 @@ anything fancy like whitespace. It is generally a good practice to just use
 the current date. Hence, we write the version identifier into a new file
 called _version_:
 
-! $ echo 2020-03-02 > version
+! $ echo 2021-03-02 > version
 
 Let's give 'goa export' another try.
 
 ! $ goa export --depot-user john
-! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2020-03-02
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2021-03-02
 ! Error: missing README file at pkg/unix_3rd/README
 
 This looks like a partial success! When inspecting _var/depot/_ now, we
 can indeed find content that looks pretty familiar.
 
-! $ ls var/depot/john/raw/unix_3rd/2020-03-02/
+! $ ls var/depot/john/raw/unix_3rd/2021-03-02/
 ! terminal.config  unix.config  vimrc
 
 However, let's pay attention to the 'Error:' part of the message. By
@@ -270,7 +270,7 @@ to the user.
 With the README file in place, let's try again:
 
 ! $ goa export --depot-user john
-! Error: archive john/raw/unix_3rd/2020-03-02 already exists in the depot
+! Error: archive john/raw/unix_3rd/2021-03-02 already exists in the depot
 !
 !  You may specify '--depot-overwrite' to replace the existing version.
 
@@ -282,26 +282,26 @@ exported already. So we are safe to specify the '--depot-overwrite' argument
 as suggested by Goa.
 
 ! $ goa export --depot-user john --depot-overwrite
-! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2020-03-02
-! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2020-03-02
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2021-03-02
+! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2021-03-02
 
-This time, the command suceeded. To celebrate the success, review the
+This time, the command succeeded. To celebrate the success, review the
 content of our part our - john's part - of the depot.
 
 ! $ find var/depot/john/
 ! var/depot/john/
 ! var/depot/john/raw
 ! var/depot/john/raw/unix_3rd
-! var/depot/john/raw/unix_3rd/2020-03-02
-! var/depot/john/raw/unix_3rd/2020-03-02/terminal.config
-! var/depot/john/raw/unix_3rd/2020-03-02/vimrc
-! var/depot/john/raw/unix_3rd/2020-03-02/unix.config
+! var/depot/john/raw/unix_3rd/2021-03-02
+! var/depot/john/raw/unix_3rd/2021-03-02/terminal.config
+! var/depot/john/raw/unix_3rd/2021-03-02/vimrc
+! var/depot/john/raw/unix_3rd/2021-03-02/unix.config
 ! var/depot/john/pkg
 ! var/depot/john/pkg/unix_3rd
-! var/depot/john/pkg/unix_3rd/2020-03-02
-! var/depot/john/pkg/unix_3rd/2020-03-02/archives
-! var/depot/john/pkg/unix_3rd/2020-03-02/runtime
-! var/depot/john/pkg/unix_3rd/2020-03-02/README
+! var/depot/john/pkg/unix_3rd/2021-03-02
+! var/depot/john/pkg/unix_3rd/2021-03-02/archives
+! var/depot/john/pkg/unix_3rd/2021-03-02/runtime
+! var/depot/john/pkg/unix_3rd/2021-03-02/README
 
 You can nicely see here how the _version_ file defines the name of the
 subdirectory of the content.
@@ -314,12 +314,12 @@ Even though the depot content looks good, it has not yet a suitable form
 for distributing it. We ultimately need to wrap the content in archive files
 and apply our digital signature to these archives. Fortunately, we don't
 need to do these steps manually. Goa assists us with the 'publish' command.
-This command implicity executes the 'goa export' command. So we need to
+This command implicitly executes the 'goa export' command. So we need to
 specify all information that we supplied to 'export'.
 
 ! $ goa publish --depot-user john --depot-overwrite
-! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2020-03-02
-! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2020-03-02
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2021-03-02
+! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2021-03-02
 ! Error: missing public key at .../unix_3rd/var/depot/john/pubkey
 !
 !  You may use the 'goa add-depot-user' command. 
@@ -367,8 +367,8 @@ let us give Goa another chance to publish the project.
 
 This time, Goa is able to proceed, as indicated by the following messages:
 
-! publish .../var/public/john/pkg/unix_3rd/2020-03-02.tar.xz
-! publish .../var/public/john/raw/unix_3rd/2020-03-02.tar.xz
+! publish .../var/public/john/pkg/unix_3rd/2021-03-02.tar.xz
+! publish .../var/public/john/raw/unix_3rd/2021-03-02.tar.xz
 
 We are also asked by GPG for our passphrase for decrypting our private key.
 We obey.
@@ -380,12 +380,12 @@ at _var/public/john/:_
 ! var/public/john
 ! var/public/john/raw
 ! var/public/john/raw/unix_3rd
-! var/public/john/raw/unix_3rd/2020-03-02.tar.xz.sig
-! var/public/john/raw/unix_3rd/2020-03-02.tar.xz
+! var/public/john/raw/unix_3rd/2021-03-02.tar.xz.sig
+! var/public/john/raw/unix_3rd/2021-03-02.tar.xz
 ! var/public/john/pkg
 ! var/public/john/pkg/unix_3rd
-! var/public/john/pkg/unix_3rd/2020-03-02.tar.xz.sig
-! var/public/john/pkg/unix_3rd/2020-03-02.tar.xz
+! var/public/john/pkg/unix_3rd/2021-03-02.tar.xz.sig
+! var/public/john/pkg/unix_3rd/2021-03-02.tar.xz
 
 
 Syncing the public depot content to the web server
@@ -408,8 +408,7 @@ Next step
 
 Now that our little Unix scenario has become publicly available in the
 form of downloadable depot content, it is ready to be deployed by users of
-Sculpt OS. The deployment step will be covered in the next episode. Stay
-tuned.
+Sculpt OS.
 
 
-_Edit (2020-03-02): updated to Genode 20.02_
+_Edit (2021-03-03): updated to Genode 21.02_

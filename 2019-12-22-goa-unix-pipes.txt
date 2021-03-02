@@ -40,7 +40,7 @@ Analogous to the bash package, described in the
 there is a single TAR archive containing all the files that comprise the
 coreutils installation.
 
-! $ tar tf var/depot/nfeske/bin/x86_64/coreutils/2020-02-19/coreutils.tar
+! $ tar tf var/depot/nfeske/bin/x86_64/coreutils/2021-02-22/coreutils.tar
 ! ./
 ! ./lib/
 ! ...
@@ -299,8 +299,8 @@ comfort of Vim. All that has become possible with less than 150 lines of XML:
 ! $ wc -l raw/unix.config raw/terminal.config pkg/unix/runtime
 !   89 raw/unix.config
 !   10 raw/terminal.config
-!   29 pkg/unix/runtime
-!  128 total
+!   28 pkg/unix/runtime
+!  121 total
 
 
 The next step
@@ -311,5 +311,5 @@ package, ready to be deployed on Sculpt OS.
 [https://genodians.org/nfeske/2020-01-16-goa-publish - Read on...]
 
 
-_Edit (2020-03-02): updated to Genode 20.02_
+_Edit (2021-03-02): updated to Genode 21.02_
 

@@ -94,11 +94,11 @@ This line tells Goa that our project depends on Genode's base API that
 features the _base/log.h_ and _base/component.h_ headers. When issuing
 the command 'goa build' again, we see the following message:
 
-! download nfeske/api/base/2020-02-27.tar.xz
-! download nfeske/api/base/2020-02-27.tar.xz.sig
+! download nfeske/api/base/2021-02-22.tar.xz
+! download nfeske/api/base/2021-02-22.tar.xz.sig
 
 Goa automatically downloaded the base API for us and installed it into a fresh
-depot at var/depot/nfeske/api/base/2020-02-27. But not only that, it also
+depot at var/depot/nfeske/api/base/2021-02-22. But not only that, it also
 re-attempted the build of the program. If we take a look at
 _var/build/x86_64/_, we see the 'hello' executable. If the output was too
 unspectacular for your taste, you may append the '--verbose' argument to the
@@ -143,21 +143,22 @@ called "hello", which is our binary.
 For running the scenario, we can use the 'goa run' command:
 
 ! hello$ goa run
-! download nfeske/bin/x86_64/base-linux/2020-02-27.tar.xz
-! download nfeske/bin/x86_64/base-linux/2020-02-27.tar.xz.sig
-! download nfeske/bin/x86_64/init/2020-02-27.tar.xz
-! download nfeske/bin/x86_64/init/2020-02-27.tar.xz.sig
-! download nfeske/src/base-linux/2020-02-27.tar.xz
-! download nfeske/src/base-linux/2020-02-27.tar.xz.sig
-! download nfeske/src/init/2020-02-27.tar.xz
-! download nfeske/src/init/2020-02-27.tar.xz.sig
-! download nfeske/api/os/2020-02-27.tar.xz
-! download nfeske/api/os/2020-02-27.tar.xz.sig
-! download nfeske/api/report_session/2019-02-25.tar.xz
-! download nfeske/api/report_session/2019-02-25.tar.xz.sig
-! download nfeske/api/timer_session/2019-11-25.tar.xz
-! download nfeske/api/timer_session/2019-11-25.tar.xz.sig
-! Genode 20.02-1-gac1b2ec24e
+
+! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz
+! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz.sig
+! download nfeske/bin/x86_64/init/2021-02-22.tar.xz
+! download nfeske/bin/x86_64/init/2021-02-22.tar.xz.sig
+! download nfeske/src/base-linux/2021-02-24.tar.xz
+! download nfeske/src/base-linux/2021-02-24.tar.xz.sig
+! download nfeske/src/init/2021-02-22.tar.xz
+! download nfeske/src/init/2021-02-22.tar.xz.sig
+! download nfeske/api/os/2021-02-22.tar.xz
+! download nfeske/api/os/2021-02-22.tar.xz.sig
+! download nfeske/api/report_session/2020-03-25.tar.xz
+! download nfeske/api/report_session/2020-03-25.tar.xz.sig
+! download nfeske/api/timer_session/2020-10-08.tar.xz
+! download nfeske/api/timer_session/2020-10-08.tar.xz.sig
+! Genode 20.11-251-g676fd7d884a <local changes>
 ! 17592186044415 MiB RAM and 8997 caps assigned to init
 ! [init -> hello] Hello
 
@@ -246,14 +247,14 @@ When issuing the 'goa build' command again, we see that Goa downloads the
 required APIs and successfully builds the example program:
 
 ! cmake_step2$ goa build
-! download nfeske/api/base/2020-02-27.tar.xz
-! download nfeske/api/base/2020-02-27.tar.xz.sig
-! download nfeske/api/libc/2020-02-19.tar.xz
-! download nfeske/api/libc/2020-02-19.tar.xz.sig
-! download nfeske/api/posix/2019-02-25.tar.xz
-! download nfeske/api/posix/2019-02-25.tar.xz.sig
-! download nfeske/api/stdcxx/2019-12-18.tar.xz
-! download nfeske/api/stdcxx/2019-12-18.tar.xz.sig
+! download nfeske/api/base/2021-02-22.tar.xz
+! download nfeske/api/base/2021-02-22.tar.xz.sig
+! download nfeske/api/libc/2021-02-22.tar.xz
+! download nfeske/api/libc/2021-02-22.tar.xz.sig
+! download nfeske/api/posix/2020-05-17.tar.xz
+! download nfeske/api/posix/2020-05-17.tar.xz.sig
+! download nfeske/api/stdcxx/2020-11-26.tar.xz
+! download nfeske/api/stdcxx/2020-11-26.tar.xz.sig
 ! [cmake_step2:cmake] -- Configuring done
 ! [cmake_step2:cmake] -- Generating done
 ! [cmake_step2:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
@@ -317,49 +318,49 @@ With this runtime package in place, let's give the Tutorial a run:
 ! [cmake_step2:cmake] -- Generating done
 ! [cmake_step2:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
 ! [cmake_step2:cmake] [100%] Built target Tutorial
-! download nfeske/bin/x86_64/base-linux/2020-02-27.tar.xz
-! download nfeske/bin/x86_64/base-linux/2020-02-27.tar.xz.sig
-! download nfeske/bin/x86_64/init/2020-02-27.tar.xz
-! download nfeske/bin/x86_64/init/2020-02-27.tar.xz.sig
-! download nfeske/bin/x86_64/libc/2020-02-27.tar.xz
-! download nfeske/bin/x86_64/libc/2020-02-27.tar.xz.sig
-! download nfeske/bin/x86_64/posix/2020-02-27.tar.xz
-! download nfeske/bin/x86_64/posix/2020-02-27.tar.xz.sig
-! download nfeske/bin/x86_64/stdcxx/2020-02-19.tar.xz
-! download nfeske/bin/x86_64/stdcxx/2020-02-19.tar.xz.sig
-! download nfeske/bin/x86_64/vfs/2020-02-27.tar.xz
-! download nfeske/bin/x86_64/vfs/2020-02-27.tar.xz.sig
-! download nfeske/src/base-linux/2020-02-27.tar.xz
-! download nfeske/src/base-linux/2020-02-27.tar.xz.sig
-! download nfeske/src/init/2020-02-27.tar.xz
-! download nfeske/src/init/2020-02-27.tar.xz.sig
-! download nfeske/src/libc/2020-02-27.tar.xz
-! download nfeske/src/libc/2020-02-27.tar.xz.sig
-! download nfeske/src/posix/2020-02-27.tar.xz
-! download nfeske/src/posix/2020-02-27.tar.xz.sig
-! download nfeske/src/stdcxx/2020-02-19.tar.xz
-! download nfeske/src/stdcxx/2020-02-19.tar.xz.sig
-! download nfeske/src/vfs/2020-02-27.tar.xz
-! download nfeske/src/vfs/2020-02-27.tar.xz.sig
-! download nfeske/api/block_session/2020-02-27.tar.xz
-! download nfeske/api/block_session/2020-02-27.tar.xz.sig
-! download nfeske/api/file_system_session/2019-11-18.tar.xz
-! download nfeske/api/file_system_session/2019-11-18.tar.xz.sig
-! download nfeske/api/os/2020-02-27.tar.xz
-! download nfeske/api/os/2020-02-27.tar.xz.sig
-! download nfeske/api/report_session/2019-02-25.tar.xz
-! download nfeske/api/report_session/2019-02-25.tar.xz.sig
-! download nfeske/api/rtc_session/2019-08-20.tar.xz
-! download nfeske/api/rtc_session/2019-08-20.tar.xz.sig
-! download nfeske/api/so/2019-02-25.tar.xz
-! download nfeske/api/so/2019-02-25.tar.xz.sig
-! download nfeske/api/terminal_session/2019-02-25.tar.xz
-! download nfeske/api/terminal_session/2019-02-25.tar.xz.sig
-! download nfeske/api/timer_session/2019-11-25.tar.xz
-! download nfeske/api/timer_session/2019-11-25.tar.xz.sig
-! download nfeske/api/vfs/2020-02-27.tar.xz
-! download nfeske/api/vfs/2020-02-27.tar.xz.sig
-! Genode 20.02-1-gac1b2ec24e
+! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz
+! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz.sig
+! download nfeske/bin/x86_64/init/2021-02-22.tar.xz
+! download nfeske/bin/x86_64/init/2021-02-22.tar.xz.sig
+! download nfeske/bin/x86_64/libc/2021-02-22.tar.xz
+! download nfeske/bin/x86_64/libc/2021-02-22.tar.xz.sig
+! download nfeske/bin/x86_64/posix/2021-02-22.tar.xz
+! download nfeske/bin/x86_64/posix/2021-02-22.tar.xz.sig
+! download nfeske/bin/x86_64/stdcxx/2021-02-22.tar.xz
+! download nfeske/bin/x86_64/stdcxx/2021-02-22.tar.xz.sig
+! download nfeske/bin/x86_64/vfs/2021-02-22.tar.xz
+! download nfeske/bin/x86_64/vfs/2021-02-22.tar.xz.sig
+! download nfeske/src/base-linux/2021-02-24.tar.xz
+! download nfeske/src/base-linux/2021-02-24.tar.xz.sig
+! download nfeske/src/init/2021-02-22.tar.xz
+! download nfeske/src/init/2021-02-22.tar.xz.sig
+! download nfeske/src/libc/2021-02-22.tar.xz
+! download nfeske/src/libc/2021-02-22.tar.xz.sig
+! download nfeske/src/posix/2021-02-22.tar.xz
+! download nfeske/src/posix/2021-02-22.tar.xz.sig
+! download nfeske/src/stdcxx/2021-02-22.tar.xz
+! download nfeske/src/stdcxx/2021-02-22.tar.xz.sig
+! download nfeske/src/vfs/2021-02-22.tar.xz
+! download nfeske/src/vfs/2021-02-22.tar.xz.sig
+! download nfeske/api/block_session/2020-05-26.tar.xz
+! download nfeske/api/block_session/2020-05-26.tar.xz.sig
+! download nfeske/api/file_system_session/2020-05-26.tar.xz
+! download nfeske/api/file_system_session/2020-05-26.tar.xz.sig
+! download nfeske/api/os/2021-02-22.tar.xz
+! download nfeske/api/os/2021-02-22.tar.xz.sig
+! download nfeske/api/report_session/2020-03-25.tar.xz
+! download nfeske/api/report_session/2020-03-25.tar.xz.sig
+! download nfeske/api/rtc_session/2020-03-25.tar.xz
+! download nfeske/api/rtc_session/2020-03-25.tar.xz.sig
+! download nfeske/api/so/2020-05-17.tar.xz
+! download nfeske/api/so/2020-05-17.tar.xz.sig
+! download nfeske/api/terminal_session/2020-04-16.tar.xz
+! download nfeske/api/terminal_session/2020-04-16.tar.xz.sig
+! download nfeske/api/timer_session/2020-10-08.tar.xz
+! download nfeske/api/timer_session/2020-10-08.tar.xz.sig
+! download nfeske/api/vfs/2020-11-26.tar.xz
+! download nfeske/api/vfs/2020-11-26.tar.xz.sig
+! Genode 20.11-251-g676fd7d884a <local changes>
 ! 17592186044415 MiB RAM and 8997 caps assigned to init
 ! [init -> cmake_step2] The square root of 24 is 4.89898
 
@@ -384,4 +385,4 @@ would be the built-in help command:
 If you have feedback, please don't hesitate to reach out!
 
 
-_Edit (2020-03-02): updated to Genode 20.02_
+_Edit (2021-03-02): updated to Genode 21.02_
