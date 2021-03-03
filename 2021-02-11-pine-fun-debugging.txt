@@ -315,5 +315,5 @@ line 64.
 As shown above, the standard GNU binutils and compiler features can bring us
 quite far without using a debugger. We have gathered a lot of input for
 investigating the error. Our next job will be using this information to
-discharge it.
+discharge it. [https:2021-02-18-pine-fun-user-land - Read on ...]
 

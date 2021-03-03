@@ -403,5 +403,7 @@ has no reason other than making the following picture more pretty.
 
 Thanks to listening to the UART's TX status bit, the output has become
 reliable. So now, we have a minimal and known-to-work blueprint for
-our upcoming kernel's UART driver.
+our upcoming kernel's UART driver. With this primitive way to get information
+out of the board, we can turn our attention to the kernel-porting work, which
+is the topic of the [https:2021-01-28-pine-fun-kernel-skeleton - next article ...]
 

@@ -11,8 +11,11 @@ board, specifically the
 [https://pine64.com/product-category/pine-a64-ltslong-term-supply/ - Pine-A64-LTS]
 single-board computer.
 
-Before attempting the porting of the kernel, it is recommended to run
-it first on one of the already supported boards to have a working reference.
+Equipped with the bare-metal serial-output facility developed in the
+[https:2020-12-17-pine-fun-serial - previous article], we are eager to turn
+our attention to the kernel. Before attempting the porting of the kernel to
+the new board, however, it is recommended to run it first on one of the
+already supported boards to have a working reference.
 In the case of the Pine-A64 board, which is based on an Allwinner multi-core
 64-bit ARM SoC, the closest approximation would be the NXP i.MX8Q EVK board,
 which ticks the boxes ARM, multi-core, and 64-bit.
