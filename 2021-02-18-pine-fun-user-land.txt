@@ -301,3 +301,8 @@ intermediate result.
 
   [https://github.com/nfeske/genode-allwinner]
 
+
+The simple log-test scenario above is just the beginning.
+In the [https:2021-03-05-pine-fun-testing.txt - next article], we take the
+board through the entire test suite of the Genode base framework.
+
