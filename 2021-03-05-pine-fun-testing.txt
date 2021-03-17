@@ -643,3 +643,8 @@ You can find the latest version of the work at the following Git repository.
 
   [https://github.com/nfeske/genode-allwinner]
 
+
+The [https:2021-03-17-pine-fun-device-access - next article] of the series
+goes into the details of accessing peripheral devices from user-level
+components.
+
