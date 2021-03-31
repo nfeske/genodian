@@ -1,0 +1,364 @@
+
+
+                        A C++ inlining anecdote
+
+
+During my recent work on the management component of Sculpt OS, the compile
+time of this particular component started to bother me. Moreover, the size of
+the resulting binary raised my eyebrows. So I took a closer look.
+
+The
+[https://github.com/genodelabs/genode/tree/master/repos/gems/src/app/sculpt_manager - sculpt manager]
+is the central component of [https://genode.org/download/sculpt - Sculpt OS]
+that defines the overall system behavior and in particular the user experience
+of the management interface. It infers the state of the system from consuming
+reports produced by other components, and it prompts the activity of other
+components by generating and updating configurations. Very manager-like, it
+merely pulls the strings but leaves all the dirty work to others. For example,
+the sculpt manager does not touch any driver interface, file system, or
+network packets. This not only shields the sculpt manager from the staggering
+complexity and risks of operating-system grunt work, but it also keeps this
+program conceptually simple. It comes down to parsing XML (consuming reports),
+feeding a bunch of internal state machines, and generating XML (producing
+configurations).
+
+While working on the sculpt manager
+for the [https://genodians.org/nfeske/2021-03-24-sculpt-os - 21.03 release],
+I noticed that its compile-test cycle was slower than I remembered, with
+a full build taking 55 seconds. A partial build after a change of only the
+_main.cc_ code still takes about 25 seconds. When casually looking at the
+size of the resulting binary amounting to 1.85 MiB, I started wondering.
+
+Given that the sculpt manager is mostly concerned with parsing and generating
+XML, I vague suspicion crossed my mind: Typical code for generating XML via
+Genode's 'Xml_generator' API looks like this:
+
+! void Resource_dialog::_gen_priority_section(Xml_generator &xml) const
+! {
+!    _gen_dialog_section(xml, "priority", "Priority", [&] () {
+!
+!       gen_named_node(xml, "vbox", "selection", [&] () {
+!
+!          auto gen_radiobutton = [&] (auto id, auto text)
+!          {
+!             gen_named_node(xml, "hbox", id, [&] () {
+!
+!                gen_named_node(xml, "float", "left", [&] () {
+!                   xml.attribute("west", "yes");
+!
+!                   gen_named_node(xml, "hbox", id, [&] () {
+!                      gen_named_node(xml, "button", "button", [&] () {
+!
+!                         xml.attribute("style", "radio");
+!                         _priority_item.gen_button_attr(xml, id);
+!                         xml.node("hbox", [&] () { });
+!                      });
+!                      gen_named_node(xml, "label", "name", [&] () {
+!                         xml.attribute("text", text);
+!                         xml.attribute("min_ex", 13);
+!                      });
+!                   });
+!                });
+!
+!                gen_named_node(xml, "hbox", "right", [&] () { });
+!             });
+!          };
+!
+!          gen_radiobutton("driver",     "Driver");
+!          gen_radiobutton("multimedia", "Multimedia");
+!          gen_radiobutton("default",    "Default");
+!          gen_radiobutton("background", "Background");
+!       });
+!
+!       gen_named_node(xml, "hbox", "right", [&] () { });
+!    });
+! }
+
+Using the API, the structure of the C++ code nicely corresponds to the
+structure of the generated XML data while the mechanism is completely
+void of dynamic memory allocations. The pattern becomes even more clear
+when looking at the implementation of the 'gen_named_node' function:
+
+! template <typename FN>
+! static inline void gen_named_node(Xml_generator &xml,
+!                                   char const *type, char const *name,
+!                                   FN const &fn)
+! {
+!    xml.node(type, [&] () {
+!       xml.attribute("name", name);
+!       fn();
+!    });
+! }
+
+It all comes beautifully down to nested calls of 'xml.node(...)'. But here is
+the trade-off: The second argument 'fn' of each call is a lambda. The exact
+type of 'fn' cannot even be written down in C++ code. It ultimately depends on
+the state of the lambda captured at the caller site. Consequently, the
+'Xml_generator::node' method must be a template. The compiler inlines its
+implementation at the caller site whenever the method template is called. The
+[https://github.com/genodelabs/genode/blob/21.02/repos/base/include/util/xml_generator.h#L345 - implementation]
+is a mere wrapper of the 'Xml_generator::Node' constructor, which is of course
+also a template. Given the
+[https://github.com/genodelabs/genode/blob/21.02/repos/base/include/util/xml_generator.h#L267 - complexity]
+of the constructor and the fact that it internally calls other inline methods,
+it is reasonable to expect that the costs of inlining would add up.
+
+
+Squeezing lambdas through an abstract interface
+-----------------------------------------------
+
+The usual practice to avoid inlining is moving method implementations to
+compilation units and keeping the headers free from code. But how can
+we move the 'Node' implementation to a compilation unit, given that it is
+a template?
+The solution lies - like so often - in adding a level of indirection.
+
+The idea is to split the 'Node' constructor into two constructors.
+
+# A public constructor that looks just like the original version from
+  the outside. It is a template that accepts a lambda as 'fn' argument.
+
+  ! template <typename FN>
+  ! Node(Xml_generator &xml, char const *name, FN const &fn)
+  ! ...
+
+# A private constructor that takes a reference to a privately defined
+  interface ('_Fn') as 'fn' argument:
+
+  ! Node(Xml_generator &, char const *, _Fn const &);
+
+  The '_Fn' is not a lambda but an abstract interface defined as follows:
+
+  ! struct _Fn : Interface
+  ! {
+  !    virtual void call() const = 0;
+  ! };
+
+  Since the private constructor is not a template, it can be implemented
+  outside the header file in a compilation unit.
+
+Now the public constructor would be just a wrapped around the private
+constructor. The only remaining question is how to squeeze the lambda argument
+as '_Fn' argument to the private constructor? Some glue is needed.
+
+! template <typename T>
+! struct _Typed_fn : _Fn
+! {
+!         T const &_fn;
+!         _Typed_fn(T const &fn) : _fn(fn) { }
+!         void call() const override { _fn(); }
+! };
+
+The '_Typed_fn' class template implements the abstract '_Fn' interface.
+The template argument 'T' is the lambda type - the type that cannot be
+written down. The '_Typed_fn' class just remembers a reference to the
+lambda passed as constructor argument and implements the 'call' method
+by calling the reference to the lambda.
+
+It's clear that an instance of '_Typed_fn' would fit perfectly well as
+argument for the private 'Node' constructor since it is compatible with the
+'_Fn' interface. But given that the lambda type cannot be written down, how
+to instantiate a '_Typed_fn' instance? The missing piece of the puzzle is the
+implementation of the public 'Node' constructor.
+
+! template <typename FN>
+! Node(Xml_generator &xml, char const *name, FN const &fn)
+! :
+!    Node(xml, name, static_cast<_Fn const &>(_Typed_fn<FN>(fn)))
+! { }
+
+It creates a temporary instance of '_Typed_fn' using the type of 'fn' that
+is known in the scope of the public constructor. So we effectively
+exchanged the method inlining for a virtual function call.
+
+Long story short, the patch for moving the 'Node' implementation into
+a compilation unit looks like
+[https://github.com/nfeske/genode/commit/014e7723221f714cd9e26e8966d7392b9d88bed0 - this].
+
+
+Measurable effects
+------------------
+
+My gut feeling was not too far off! This little change happens to reduce the
+build time of the sculpt manager from 55 seconds to 42 seconds (23% speedup)
+whereas the binary size changes from 1.85 MiB to 1.51 MiB (18% smaller).
+
+
+Cross correlations and observations
+-----------------------------------
+
+To put the observed effect into perspective, I went for another experiment,
+enabling the compiler's size optimization by placing the following line
+in the _target.mk_ file of the sculpt manager.
+
+! CC_OLEVEL := -Os
+
+Here we presumably forego the benefits of the default optimization level (O2)
+but can see what the compiler can achieve without code changes.
+
+Compiling the original version (with the inlined 'Node' implementation)
+takes 28 seconds and produces a binary of 1.1 MiB. With the 'Node' constructor
+moved to a compilation unit, the compile time goes down to 22 seconds while
+another 0.1 MiB are shaved off the binary.
+
+As another quick experiment, I compared the gzip'ed binary sizes. These
+are of interest because the sculpt image ultimately contains the binaries
+in compressed form. Using gzip, we can quickly estimate the effect of a change
+on the sculpt image (which is 27 MiB in total to put the numbers in relation).
+The original sculpt manager as gzip'ed binary amounts to 621 KiB. The move of
+the 'Node' constructor reduces the gzip'ed binary to 439 KiB. Combined with
+the compiler's size optimization enabled, the gzip'ed binary becomes 266 KiB.
+
+The lessons I learned:
+
+* The proliferation of the use of lambda arguments within Genode's code
+  base contributes greatly to the robustness and clarity of the code.
+  But the aggressive inlining that is inherent in this approach should
+  be scrutinized from time to time. Otherwise an inflation of binaries and
+  compile times can creep in over time.
+
+* The compiler's size optimizations have a strong effect on both the
+  compile time and the binary sizes. For speeding up the compile-test cycle,
+  a temporary change of the optimization level can be a nice life hack.
+  To stress this point even more, the optimization level 'O0' brings
+  the total compile time of the sculpt manager down to 15 seconds.
+
+* To remedy the inflating effects of passing lambda arguments, we can
+  apply the pattern described above. However, to avoid going overboard
+  with funneling lambda arguments through virtual function calls,
+  we need to find the (presumably few) places in our code that really
+  benefit from such treatment.
+
+
+Systematic analysis of inlining effects
+---------------------------------------
+
+The change of 'Xml_generator::Node' was just instinctive. But it wetted
+my appetite. To go forward, it would be nice to have a systematic approach to
+uncover troublesome code that spoils our compilation times and binary sizes.
+Ultimately, I'd like to ask the question:
+_Which line of code "contributes" how many bytes to a binary?_
+
+Unfortunately, I'm not aware of any go-to tools that provide such statistics.
+Fortunately, however, we can use binutils to build us a sledgehammer.
+
+The idea is to ask the 'addr2line' utility for the source line of each byte
+of the text section of the ELF binary. Once we have this information for each
+byte, we can use 'sort' and 'uniq -c' to obtain a histogram.
+
+Let's take the sculpt manager binary after the 'Node' constructor change
+as an example.
+
+# First, we have to build the ELF binary.
+  ! build/x86_64$ make app/sculpt_manager
+  ! ...
+  The result can be found at _app/sculpt_manager/sculpt_manager_.
+
+# Identify the start and size of the text section that contains the code.
+  ! build/x86_64$ readelf -SW app/sculpt_manager/sculpt_manager \
+  !             | grep "\.text"
+  ! [ 1] .text PROGBITS 0000000001000000 001000 119d58 00  AX  0   0 16
+  !                             ^                  ^
+  !                           start               size
+  The numbers are hexadecimal.
+
+# Generating a list of numbers covering the entire range of the text
+  section from 0x1000000 to 0x1119d58 (technically, the range goes
+  to one byte less but let's not get too pedantic). This can be achieved
+  with the 'seq' tool, e.g.,
+
+  ! $ seq 0x10 0x20
+  ! 16
+  ! 17
+  ! 18
+  ! 19
+  ! 20
+  ! 21
+  ! 22
+  ! 23
+  ! 24
+  ! 25
+  ! 26
+  ! 27
+  ! 28
+  ! 29
+  ! 30
+  ! 31
+  ! 32
+
+# The 'seq' tool accepts hexadecimal arguments but its output is decimal.
+  Since the addr2line utility takes hexadecimal input, we have to convert
+  the output of 'seq' to hexdecimal numbers. A short
+  [https://stackoverflow.com/questions/378829/convert-decimal-to-hexadecimal-in-unix-shell-script - web search]
+  combined with a little affection for 'sed' brings us to the following solution.
+  ! $ seq 0x10 0x20 | sed "s/^/obase=16;/" | bc
+  ! 10
+  ! 11
+  ! 12
+  ! 13
+  ! 14
+  ! 15
+  ! 16
+  ! 17
+  ! 18
+  ! 19
+  ! 1A
+  ! 1B
+  ! 1C
+  ! 1D
+  ! 1E
+  ! 1F
+  ! 20
+
+# Putting the pieces together.
+
+  ! build/x86_64$ seq 0x1000000 0x1119d58 \
+  !  | sed "s/^/obase=16;/" \
+  !  | bc \
+  !  | genode-x86-addr2line -e app/sculpt_manager/sculpt_manager \
+  !  > /tmp/sculpt_manager.lines
+
+  The result is redirected to the file _/tmp/sculpt_manager.lines_.
+  While the computer gnaws on our ELF binary byte for byte, I admittedly
+  feel a bit guilty. But the end justifies the means.
+
+  Two or three minutes later, we get a file of 70 MiB full of _information_.
+  ! $ ls -lh /tmp/sculpt_manager.lines 
+  ! -rw-rw-r-- 1 ... 70M ... /tmp/sculpt_manager.lines
+
+  The lines of this file have the following form. There are more than a
+  million of such lines. Still, it's safe to open the file in Vim in a matter
+  of milliseconds. Isn't that incredible?
+
+  !/path/to/.../repos/base/include/util/xml_generator.h:234
+
+# To get a histogram, we can filter the lines through 'sort' so that
+  identical lines appear next to each other, followed by 'uniq -c',
+  which eliminates and counts duplicates. Since we are interested in
+  the highest number of duplicates (the source lines that are
+  responsible for the most bytes in the binary), we wrap up the
+  filter chain with a 'sort -n'.
+
+  ! $ sort /tmp/sculpt_manager.lines | sort | uniq -c | sort -n
+  ! ...
+  ! 15918 /.../repos/base/include/util/string.h:627
+  ! 16563 /.../repos/base/include/util/token.h:75
+  ! 17150 /.../repos/gems/src/app/sculpt_manager/xml.h:30
+  ! 19229 /.../repos/base/include/util/string.h:82
+  ! 19854 /.../repos/base/include/util/xml_generator.h:86
+  ! 22018 /.../repos/base/include/util/string.h:704
+  ! 24206 /.../repos/base/include/util/xml_node.h:860
+  ! 27959 /.../repos/base/include/util/string.h:99
+  ! 28648 /.../repos/base/include/util/xml_generator.h:323
+  ! 35528 /.../repos/base/include/util/xml_generator.h:237
+  ! 35802 /.../repos/base/include/util/xml_generator.h:238
+  ! 40800 /.../repos/base/include/util/xml_generator.h:234
+  ! 47918 /.../repos/base/include/util/xml_generator.h:287
+  ! 51200 /.../repos/base/include/util/string.h:702
+
+From this output, we learn that
+[https://github.com/nfeske/genode/blob/xml_generator_abi/repos/base/include/util/string.h#L702 - line 702]
+of _util/string.h_ makes our binary 50 KiB fatter.
+Given those numbers, there is clearly potential for further optimization in
+the areas of string processing, XML parsing, and XML generating.
+But I'm leaving this side track for now.
