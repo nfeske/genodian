@@ -1,0 +1,146 @@
+
+
+                      Performance analysis made easy
+
+
+Identifying performance bottlenecks of Genode's low-level system components
+remains a tedious effort. For this reason, it is usually not practiced as a
+routine during development but only under strong pressure. Conversely,
+performance optimizations may be implemented without evidence for their
+presumed effect, increasing complexity for rather intangible benefits. Now a
+new utility presented in this posting comes to the rescue.
+
+Even though Genode's API features the 'Trace::timestamp()' function as an easy
+and cheap way to obtain the current time-stamp counter, in practice, it
+remains barely used for manual instrumentation because such instrumentations
+require too much labor. The easy part is forming a hypothesis of what _might_
+be a bottleneck. The cumbersome part is validating the hypothesis. One needs
+to spill calls of 'Trace::timestamp' throughout the code, store the returned
+values somewhere, but where? Time differences want to be computed and printed
+in a human-friendly way. Worse, when instrumenting high frequented code, the
+logging noise tends to skew the measurements. So one has to create ad-hoc
+sampling solutions like printing only every 1000th measurement. Well, it's not
+exactly glamorous.
+
+During last weekend, I made it my mission to improve the boot time of Sculpt,
+taking the output of a
+[https://github.com/nfeske/genode/commit/6871efd08742669359d9698b6f7cc476c747b2b9 - slightly modified]
+version of our top tool as
+[https://github.com/nfeske/genode/commit/a9073c9d4e94bbca0b55dfef30df893bc483b987 - starting point].
+I was soon met with an old suspicion, namely that the configuration processing
+of the init component might become a scalability issue sooner or later.
+Apparently, _now_ was later. After a few iterations of manually adding
+time-stamp measurements to several places in init's code, I longed for a
+more pleasant and playful approach.
+As an excuse for interrupting my soul-breaking instrumentation activity, I
+started playing around with a combination of antipatterns found in the
+cubwebs of C++ history to solve my problem.
+_(update: after a joint review with Christian Helmuth, the solution_
+_became much nicer and cleaner)_
+I eventually came up with a
+[https://github.com/nfeske/genode/commit/caab614117eb944cd57c763b3795cdc004255c4b - little utility].
+It works as follows:
+
+When suspecting a function to be a bottleneck, add a single line to at
+the beginning of the scope, for example, I suspected the
+'Sandbox::Library::apply_config' method to be the problem. So I changed it
+like so:
+
+! void Genode::Sandbox::Library::apply_config(Xml_node const &config)
+! {
+!    GENODE_LOG_TSC(1);
+!    ...
+
+Additionally, one needs to include the header with my debug utility.
+
+! #include <debug/log.h>
+
+When running the system the next time (e.g., using run/log as a quick test),
+one can observe the following line in the log output:
+
+! [init] TSC apply_config: 6396K (1 calls, last 6396K)
+! ...
+
+This line tells us that 'apply_config' consumed 6.3 million time-stamp-counter
+cycles, it was called once. The last call took (well, that's obvious) 6.3
+million cycles.
+Next I was interested in the time spent in the 'resolve_session_request' code
+because this code is executed multiple times during the creation of a new
+child. So I changed the beginning of its scope as follows:
+
+! #include <debug/log.h>
+!
+! ...
+!
+! Sandbox::Child::Route
+! Sandbox::Child::resolve_session_request(Service::Name const &service_name,
+!                                         Session_label const &label,
+!                                         Session::Diag const  diag)
+! {
+!    GENODE_LOG_TSC(1);
+!    ...
+
+Now, the log output becomes more interesting.
+
+! [init] TSC resolve_session_request: 71762 (1 calls, last 71762)
+! [init] TSC resolve_session_request: 408K (2 calls, last 336K)
+! [init] TSC resolve_session_request: 491K (3 calls, last 83090)
+! [init] TSC resolve_session_request: 567K (4 calls, last 76062)
+! [init] TSC resolve_session_request: 644K (5 calls, last 77162)
+! [init] TSC apply_config: 36860K (1 calls, last 36860K)
+! ...
+
+We see that 'resolve_session_request' was called 5 times before 'apply_config'
+completed. It is also visible how the total costs of the
+'resolve_session_request' code accumulates over the number of calls and how
+the costs of a single execution can vary between calls. We can also see how
+the added debug noise skews the measurement quite dramatically. The total
+costs of 'apply_config' jumped from 6.3 to 36.9 million cycles. Here is where
+the argument of the 'GENODE_LOG_TSC' macro comes into play. By changing it to
+5, we can tell the macro that the statistics should be printed in intervals of
+every 5 calls instead every single call. With this adjustment, the output
+changes as follows.
+
+! [init] TSC resolve_session_request: 395K (5 calls, last 70970)
+! [init] TSC apply_config: 17917K (1 calls, last 17917K)
+! ...
+
+The argument allows us to tune the level of logging noise according to the
+frequency of calls. For example, for a highly frequented interrupt handler,
+a number of 100 or even 1000 might be useful.
+
+_Even though the Heisenberg effect is still observable, we were able to reduce_
+_it. This contrived example is actually quite an extreme case because the_
+_'resolve_session_request' call is very cheap compared to producing even a_
+_single line of log output._
+
+Sometimes, the function name is not enough to unambiguously distinguish
+multiple points of instrumentation. For example, two methods of different
+classes may have the same name, multiple overloads may exist, or one wants
+to place multiple instrumentations into a single scope to measure different
+parts of a function. Here, the 'GENODE_LOG_TSC_NAMED' macro
+becomes handy. Instead of infering the log message from the surrounding
+scope, it accepts a constant character string as argument.
+
+! GENODE_LOG_TSC_NAMED(1, "inner loop");
+
+By using this variation, it is for example possible to measure the costs of the
+'GENODE_LOG_TSC' mechanism itself by placing probes in nested loops. Speaking
+of costs, on my current test machine (Lenovo x250), one probe takes about 400
+cycles. Most of the costs can be attributed to the use of a mutex. When
+commenting out the two corresponding lines of the utility, the costs drop to
+only 100 cycles. As a bottom line, don't worry about the costs as long as the
+log noise is tuned to a reasonable level.
+
+Coming back to the beginning of this story - the optimization of the boot
+time of Sculpt OS - I'm happy to report that I was able to reduce the boot
+time from about 3.9 seconds to only 2.3 seconds! The 'GENODE_LOG_TSC' utility
+was an invaluable companion during this effort.
+
+BTW, the bootup of Sculpt is an extreme case in terms of many threads being
+executed concurrently on one CPU. Measurements based on TSC values can easily
+be botched by the kernel's preemptive scheduling. To stabilize measurements
+across runs, it is advisable to discharge such preemptions entirely. The
+easiest way is setting the default time slice to a large value,
+[https://github.com/nfeske/genode/commit/caab614117eb944cd57c763b3795cdc004255c4b - like 90 seconds].
+
