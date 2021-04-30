@@ -678,3 +678,6 @@ These test programs are accompanied with matching run scripts located at the
 
   [https://github.com/nfeske/genode-allwinner]
 
+
+In the next part, we mold the results of the experiments into a proper driver
+component. [https:2021-04-29-platform-driver - Read on...]
