@@ -22,7 +22,7 @@ drivers from each other where each driver gets to see only a tiny part of the
 picture. With a DTS file of more than 1600 lines (as for the Pine-A64-LTS)
 board given, it is really hard to see to see clear lines of responsibilities
 between drivers. This is where the new
-[https://github.com/nfeske/genode/commit/57ceac6fcbe7774dfcabf99b2dcaeb1d2da6b1aa - tool set]
+[https://github.com/nfeske/genode/commits/dts - tool set]
 comes into play. Just for reference, usage information are provided by
 executing the tool without arguments.
 
@@ -41,8 +41,8 @@ tool to generate a PNG file.
   Does this count as generative art?
 
 Even though the picture presents only a tiny fraction of the information
-present in the DTS file - neither any properties nor device addresses are
-shown - it is too overwhelming to be useful.
+present in the DTS file - neither any properties, nor device addresses, nor
+unlabeled nodes are shown - it is too overwhelming to be useful.
 
 Let's say we are interested in the porting of the ethernet driver. In the
 previous article we already manually walked the DTS tree and spotted the
@@ -99,6 +99,52 @@ source.
 
 The device-tree compiler does not complain, which gives us the reassurance
 that the tree is in a healthy state after the brutal pruning.
+
+
+Test-driving Linux with the tuned device tree
+---------------------------------------------
+
+In order to successfully boot the Linux kernel, the supplied device tree
+needs a few mandatory ingredients.
+First, we need to supply the information about the timer to be used
+by the kernel, which is provided by the '/timer' node.
+Furthermore, '/chosen' node contains the
+'stdout-path' property, which tells the kernel where messages should go.
+In the device tree for the Pine-A64-LTS board, it is defined as
+! stdout-path = "serial0:115200n8";
+The 'serial0' part of the string refers to an entry of the '/aliases' node,
+which is defines as follows. Note that it contains an alias referring to
+our Ethernet device 'emac'.
+
+! aliases {
+!   ethernet0 = &emac;
+!   serial0 = &uart0;
+!   serial1 = &uart1;
+!   serial2 = &uart2;
+!   serial3 = &uart3;
+!   serial4 = &uart4;
+! };
+
+The following command extracts a device tree featuring those mandatory nodes.
+Since the 'emac' device is implicitly pulled in by the '/alias' node, we
+don't need to explicitly specify the '--select emac' argument.
+
+! tool/dts$ ./extract --select /chosen --select /aliases --select /timer \
+!                     flat_pine64lts.dts
+
+The resulting device tree, once compiled into its dtb representation, suffices
+to boot the hand-crafted Linux kernel we built in the previous article. It
+looks as follows.
+
+[image emac_lx_dts]
+  This fine-tuned device tree suffices for using Ethernet with Linux.
+
+The '/timer', '/chosen', and '/aliases' nodes are not shown because the graph
+omits unlabeled nodes. It still contains a few obviously unneeded parts such
+as the ones relates to the 'simplefb' nodes (defined inside the '/chosen'
+node) or the 'uart1' to 'uart4' nodes (referenced by the '/aliases' node). To
+remove those, one may consider cutting off those dependencies by commenting
+out those parts in the _flat_pine64lts.dts_ file.
 
 
 Prospects
