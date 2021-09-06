@@ -159,3 +159,6 @@ e.g., presenting child nodes contained in parent nodes. It's also tempting to
 generate XML configuration data for Genode's platform driver from the
 device-tree information.
 
+In the next episode, the pruned device tree will make an appearance during
+the quest of porting the emac Linux driver to Genode.
+[https://genodians.org/nfeske/2021-09-03-pine-fun-networking - Read on ...]
