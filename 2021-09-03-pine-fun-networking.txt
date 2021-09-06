@@ -28,30 +28,109 @@ the _genode-allwinner_ repository.
 Overview
 --------
 
-The principle steps of the porting work are as follows.
+The activity of porting a Linux driver is too elaborate for one swift step.
+To get a sense of measurable progress, it is useful and motivating to define
+intermediate goals that can be wrapped up one by one.
 
-# Creating a source skeleton of driver component
-  (Section [Directory structure of the driver component])
+# Creating a *minimal Linux kernel configuration* that accommodates barely
+  more than the single driver we are interested in, similar to what
+  we did in the [https://genodians.org/nfeske/2021-05-12-pine-fun-linux - Taking Linux out for a walk].
+  While pursuing this goal, one can solely keep the focus on the Linux kernel
+  configuration.
 
-# Adding Linux kernel source codes to the component and
-  creating a first linked executable binary
-  (Sections [Identifying the Linux source codes of interest] and
-  [Attaining a linked ELF binary])
+# Getting a tangible feeling for the targeted device and the interplay
+  with other devices. Looking at the *pruned device tree* as described
+  [https://genodians.org/nfeske/2021-05-19-pine-dts-pruning - here] is a
+  good aid. Look at the cobweb of device nodes and try to make a mental
+  picture out of it. E.g., in the case of the network driver, we have to
+  consider the ethernet PHY, the actual network controller (emac), and spot
+  the dependency from certain clocks and voltages as potential risks.
+  To double-check the findings, it is recommended to test-drive Linux with the
+  pruned device tree to see if it is still able to operate the device.
 
-# Creating a run script as development testbed
-  (Section [Executable testbed])
+# Creating the initial source skeleton of the driver component and
+  successfully compiling and linking Linux code into
+  a *first executable ELF binary*.
+  During this step, one can focus solely on the build system, symbols, and
+  compilation units. One doesn't have to understand the code in order to
+  link it. This step is described in Sections
+  [Directory structure of the driver component] and
+  [Identifying Linux source codes of interest].
 
-# Satisfying the runtime needs of the used Linux kernel code
-  (Sections [Linux initcalls] and [The lx_emul building blocks])
+# Creation of a *test scenario* (run script) and a convenient work flow to
+  execute and quickly update the binary. At this step, which is covered
+  by Section [Executable testbed], we are merely concerned with the
+  relationships between components without looking inside them. For the work
+  flow, it is satisfying to string together a few convenient shell commands
+  to ease ones life.
 
-# Iterative debugging and learning
-  (Sections [Linux caveats] and [Debugging and development hints])
+# Complete the execution of *low-level Linux initcalls* until the first
+  device resources are requested. Here, one has to get close to the Linux code
+  but can ignore any hardware-specific concerns.
 
-# Interfacing the driver with other Genode components
-  (Section [Connecting the driver with a Genode session interface])
+# Moving the work flow over to the *real hardware* leveraging the capabilities
+  of Genode's run tool, and possibly tweaking it using custom plugins. The
+  focus is on the use of shell commands and glueing them together using
+  Tcl script snippets, possibly even
+  [https://genodians.org/chelmuth/2019-03-13-powerplug - automating the powering]
+  of the target hardware to make one's life better.
 
-# Making the driver available as depot package
-  (Section [Packaging the driver])
+# Successively *completing all Linux initcalls* including those of the
+  driver code. One has to iteratively boot the target hardware, look at the
+  log output, compare the log with the Linux kernel log obtained
+  beforehand. Whenever both logs diverge in non-plausible ways, investigate
+  and instrument the code of both native Linux and Genode. In other words,
+  taking a deep dive into the Linux kernel code, adding additional Linux
+  subsystems, curating dummy functions, supplementing custom emulation code,
+  and extending the platform-driver's configuration whenever encountering
+  the driver's request for additional hardware resources.
+  This step is addressed by Sections [Linux initcalls] and
+  [The lx_emul building blocks].
+
+# Once all initcalls are executed, *provoke a small operation* of the driver.
+  For example, exercising the link detection of the network driver by
+  plugging/unplugging the cable, comparing the resulting log output with
+  native Linux. For the first time, the driver's actual functionality and
+  its interplay with the physical world comes into focus.
+  During the iterative debugging and learning, the tips and tricks given by
+  Sections [Linux caveats] and [Debugging and development hints]
+  may be of help.
+
+# Get the *driver's core functionality* in the form of a self-sufficient
+  program to work. In the network driver's case, this would be the
+  determination of the device's MAC address as well as the transmission
+  and reception of network packets. At this stage, the driver remains
+  co-located with the test code in one program. In other words, the
+  test program uses the Linux kernel's internal APIs directly. For the
+  network driver, one can conveniently use Linux' builtin DHCP support
+  as test program as described in below in Section
+  [Using Linux' built-in DHCP support as networking test].
+
+# Adding the *Genode service interface* to the driver, e.g., by using
+  the building blocks of the 'genode_c_api'. To test this integration,
+  the test scenario must be enhanced by a separate component that
+  interacts with the driver component using a Genode session interface.
+  Knowing that the Linux code and the device is operational,
+  one can focus solely on the Genode integration at this stage.
+  This step is covered in more detail in Section
+  [Connecting the driver with a Genode session interface].
+
+# Once the driver works reliably in a minimalistic setting, it is time
+  to expose it to regular networking scenarios by *packaging* it into
+  a form that is digestible by the arsenal of existing run scripts.
+  The packaging step is covered in Section [Packaging the driver].
+
+# With non-trivial work loads at hand, one can take a critical look at
+  the driver's behavior, in particular at its performance,
+  and *optimize* it if desired.
+
+# Finally, one can wrap up the work by cleaning up the code, potentially
+  consolidating parts shared with other drivers, reviewing the result, and
+  documenting the component.
+
+When broken up into these steps - each with a different focus and a tangible
+intermediate result - the work can be conducted in manageable pieces and can
+even passed-on between developers.
 
 
 Directory structure of the driver component
@@ -635,105 +714,6 @@ for global variables in _generated_dummies.c_ and investigate their purpose.
 
 Debugging and development hints
 ###############################
-
-Pursuing intermediate goals
-===========================
-
-The activity of porting a driver is too elaborate for one swift step.
-To get a sense of measurable progress, it is useful and motivating to define
-intermediate goals that can be wrapped up one by one.
-
-# Creating a *minimal Linux kernel configuration* that accommodates barely
-  more than the single driver we are interested in, similar to what
-  we did in the [https://genodians.org/nfeske/2021-05-12-pine-fun-linux - Taking Linux out for a walk].
-  While pursuing this goal, one can solely keep the focus on the Linux kernel
-  configuration.
-
-# Getting a tangible feeling for the targeted device and the interplay
-  with other devices. Looking at the *pruned device tree* as described
-  [https://genodians.org/nfeske/2021-05-19-pine-dts-pruning - here] is a
-  good aid. Look at the cobweb of device nodes and try to make a mental
-  picture out of it. E.g., in the case of the network driver, we have to
-  consider the ethernet PHY, the actual network controller (emac), and spot
-  the dependency from certain clocks and voltages as potential risks.
-  To double-check the findings, it is recommended to test-drive Linux with the
-  pruned device tree to see if it is still able to operate the device.
-
-# Successful compilation and linking of the Linux code into
-  a *first executable ELF binary* as we did in Section
-  [Identifying Linux source codes of interest].
-  During this step, we can focus on the level of build system, symbols,
-  compilation units. We don't have to understand the code in order to link it.
-
-# Creation of a *test scenario* (run script) and a convenient work flow to
-  execute and quickly update the binary. At this step, we are only concerned
-  with the relationships between components without looking inside them. For
-  the work flow, it is satisfying to put together a few convenient shell
-  commands - like the one cited above for updating the _generated_dummies.c_
-  file - to ease ones life.
-
-# Complete the execution of *low-level Linux initcalls* until the first
-  device resources are requested. Here, one has to get close to the Linux code
-  but can ignore any hardware-specific concerns.
-
-# Moving the work flow over to the *real hardware* leveraging the capabilities
-  of Genode's run tool, and possibly tweaking it using custom plugins. The
-  focus is on the use of shell commands and glueing them together using
-  Tcl script snippets, possibly even
-  [https://genodians.org/chelmuth/2019-03-13-powerplug - automating the powering]
-  of the target hardware to make one's life better.
-
-# Successively *completing all Linux initcalls* including those of the
-  driver code. One has to iteratively boot the target hardware, look at the
-  log output, compare the log with the Linux kernel log obtained
-  beforehand. Whenever both logs diverge in non-plausible ways, investigate
-  and instrument the code of both native Linux and Genode. In other words,
-  taking a deep dive into the Linux kernel code, adding additional Linux
-  subsystems, curating dummy functions, supplementing custom emulation code,
-  and extending the platform-driver's configuration whenever encountering
-  the driver's request for additional hardware resources.
-
-# Once all initcalls are executed, *provoke a small operation* of the driver.
-  For example, exercising the link detection of the network driver by
-  plugging/unplugging the cable, comparing the resulting log output with
-  native Linux.
-
-# Get the *driver's core functionality* in the form of a self-sufficient
-  program to work. In the network driver's case, this would be the
-  determination of the device's MAC address as well as the transmission
-  and reception of network packets. At this stage, the driver remains
-  co-located with the test code in one program. In other words, the
-  test program uses the Linux kernel's internal APIs directly. For the
-  network driver, one can conveniently use Linux' builtin DHCP support
-  as test program as described in below in Section
-  [Using Linux' built-in DHCP support as networking test].
-
-# Adding the *Genode service interface* to the driver, e.g., by using
-  the building blocks of the 'genode_c_api'. To test this integration,
-  the test scenario must be enhanced by a separate component that
-  interacts with the driver component using a Genode session interface.
-  Knowing that the Linux code and the device is operational,
-  one can focus solely on the Genode integration at this stage.
-  This step is covered in more detail in Section
-  [Connecting the driver with a Genode session interface].
-
-# Once the driver works reliably in a minimalistic setting, it is time
-  to expose it to regular networking scenarios by *packaging* it into
-  a form that is digestible by the arsenal of existing run scripts.
-  The packaging step is covered in Section [Packaging the driver].
-
-# With non-trivial work loads at hand, one can take a critical look at
-  the driver's behavior, in particular at its performance,
-  and *optimize* it if desired.
-
-# Finally, one can wrap up the work by cleaning up the code, potentially
-  consolidating parts shared with other drivers, reviewing the result, and
-  documenting the component.
-
-When broken up into these steps - each with a different focus and a tangible
-intermediate result - the work can be conducted in manageable pieces and can
-even passed-on between developers.
-
 
 Enabling Linux debug messages
 =============================
