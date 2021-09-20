@@ -1,0 +1,217 @@
+
+
+                 Pine fun - Booting Genode on the Pinephone
+
+
+Until now, my exploration of the Allwinner A64 SoC was mainly concerned with
+the Pine-A64-LTS board, which offers developer conveniences like booting over
+the network, or easily accessible reset and GPIO pins. Now, it's time to
+switch gears by moving the development workflow over to the Pinephone.
+
+In the [https://genodians.org/nfeske/2021-09-03-pine-fun-networking - previous episode],
+we picked networking as a suitable topic to cover the principle steps needed
+for transplanting a moderately complex device driver from the Linux kernel to
+Genode.
+However, our vision of a Genode-based mobile phone requires drivers for
+device hardware that is not present on the Pine-A64-LTS board. I'm speaking
+of the display, touch screen, and modem, among many other peripherals.
+So the time is overdue to switch the development to the Pinephone hardware.
+
+
+Booting from SD-card
+--------------------
+
+Unlike regular smartphones, the Pinephone is able to boot directly from
+an SD card, which is the preferred way for trying out the various Linux-based
+operating systems that exist for the phone. Both the Pine-A64-LTS board as
+well as the Pinephone are supported by the official U-Boot boot loader.
+We already went though the process of manually building and installing
+U-Boot in an
+[https://genodians.org/nfeske/2020-12-10-pine-fun-warmup#The_U-Boot_boot_loader - earlier article].
+In order to attain repeatable and robust development workflows, however, we
+have to automate these steps.
+
+The _first_ piece of the puzzle is an automated way of obtaining a known-to-work
+version of U-Boot, which comprises the *downloading* (and potentially patching)
+of the source code and its dependencies. In Genode, this step is covered by
+the so-called _ports_ tool, which installs 3rd-party software according
+to a port description. In the case at hand, the port description file is
+[https://github.com/nfeske/genode-allwinner/blob/master/ports/pine_uboot.port - ports/pine_uboot.port].
+The port consists of two parts that are mandatory for building U-Boot for
+the platform, namely U-Boot itself and the so-called ARM Trusted Firmware.
+Each of both parts is obtained from a separate Git repository.
+
+The _second_ part is the *compile-time configuration* and the actual *build*
+process of U-Boot. Here, Genode's build system comes in. The build target
+[https://github.com/nfeske/genode-allwinner/blob/master/src/u-boot/pine/target.mk - u-boot/pine/target.mk]
+conserves all the magic spells needed to bake a U-Boot binary that is known
+to work well on the targeted board. From a Genode build directory, it can
+be invoked via:
+
+! build/arm_v8a$ make u-boot/pine BOARD=pinephone
+! ...
+! ...
+! ...
+!    CONVERT  SD-card image u-boot/pine/pinephone.img
+
+Let me draw your attention to two interesting details of the _target.mk_ file.
+It takes one of U-Boot's default configurations as starting point and merely
+tweaks a few options in a declarative way:
+
+! SUPPORTED_BOARDS := pine_a64lts pinephone
+!
+! UBOOT_DEFCONFIG(pine_a64lts) := pine64-lts_defconfig
+! UBOOT_DEFCONFIG(pinephone)   := pinephone_defconfig
+!
+! ...
+!
+! # read boot config from SD-card
+! UBOOT_OPTION(pinephone) += ENV_EXT4_INTERFACE="mmc"
+! UBOOT_OPTION(pinephone) += ENV_EXT4_DEVICE_AND_PART="0:1"
+! UBOOT_ENABLE_COMMON     += ENV_IS_IN_EXT4 CMD_EXT4_WRITE
+! UBOOT_DISABLE_COMMON    += ENV_IS_IN_FAT
+
+Those declarations are taken as input into U-Boot's '.config' file by the
+rule '$(UBOOT_CONFIG_FILE)'. In contrast to merely supplying a blessed
+'.config' file handcrafted once via 'make menuconfig', this approach nicely
+conserves the purpose behind configuration choices. E.g., as seen in the
+snippet above, we deliberately configure U-Boot for using EXT file-system
+support instead of FAT.
+
+Another noteworthy detail is the '$(SD_CARD_IMAGE_FILE)' rule, which
+creates a ready-to-use SD-card image that hosts only the boot loader. The rule
+documents the (fairly non-obvious) steps needed for partitioning and
+formatting of an SD card image that is works out of the box without any manual
+tweaking needed.
+
+The _third_ piece of the puzzle is the automated creation of a bootable
+SD-card image for any given Genode system scenario using Genode's *run tool*.
+The solution comes in the form of the
+[https://github.com/nfeske/genode-allwinner/blob/master/tool/run/image/pine_uboot_sdcard - tool/run/image/pine_uboot_sdcard]
+plugin, with crafts an SD-card image containing U-Boot, a U-Boot runtime
+configuration, and a Genode system image. It can be activated by adding the
+following line to the build directory's etc/build.conf file:
+
+! RUN_OPT += --include image/pine_uboot_sdcard
+
+When enabled, the execution of a run script results in a ready-to-use SD-card
+image that can be written to an SD-card using the 'dd' command. For example:
+
+! build/arm_v8a$ make run/log KERNEL=hw BOARD=pine_a64lts
+! ...
+! Created SD-card image file var/run/log.img (6901kiB)
+! build/arm_v8a$ sudo dd if=var/run/log.img of=/dev/sdx bs=1M conv=fsync
+
+_Of course '/dev/sdx' must be adjusted to the device of the SD-card._
+
+
+Using fastboot with the Pinephone
+---------------------------------
+
+A development workflow based on juggling SD-cards is hardly satisfying. It is
+also prone to wearing out the hardware. Since network boot is out of question
+due to the lack of a network connector on the phone, we long for an
+alternative way to load custom system images to the Pinephone.
+Here, the so-called 'fastboot' mechanism enters the picture. If enabled in
+U-Boot, the boot loader enters a fastboot mode that uses the USB OTG connector
+for receiving a stream of bytes before issuing a boot command.
+
+Using the u-boot/pine build target for 'BOARD=pinephone', the resulting
+SD-card image has everything needed to use this mechanism.
+
+# When booting this image, enter the boot prompt by hitting a key.
+
+# To automatically enter fastboot mode when booting up, one can define
+  the 'bootcmd' environment variable accordingly.
+
+  ! setenv bootcmd fastboot usb 0
+
+# The command executed after the data transfer is finished can be defined
+  via the 'fastboot_bootcmd' environment variable.
+
+  ! setenv fastboot_bootcmd bootm 0x42000800
+
+# Furthermore, to shave off a few seconds from each test cycle, the
+  customization of the 'bootdelay' environment variable may be considered.
+
+  ! setenv bootdelay 0
+
+# Finally, one has to make the changed environment variables permanent
+  by saving the changed environment back to the SD card.
+
+  ! saveenv
+
+Upon the next boot, the Pinephone automatically enters the fastboot mode,
+waiting for the transfer of an image file over USB. At this point, the boot
+log happens to show the message "musb-hdrc: peripheral reset irq lost!".
+
+At the host side, the following steps must be taken.
+
+# Enable fastboot loading in Genode's run tool by adding the following
+  lines to the _etc/build.conf_ file in the build directory.
+
+  ! RUN_OPT += --include image/uboot
+  ! RUN_OPT += --include load/fastboot
+
+# Install the fastboot tools, e.g., the 'fastboot' Debian package.
+
+# On Linux, we must allow a regular user (like us) to access the fastboot
+  USB device. This can be achieved with a custom udev rule by adding
+  a file _/etc/udev/rules.d/99-pinephone-fastboot.rules_ with the following
+  content:
+  ! SUBSYSTEM=="usb", ATTR{idVendor}=="1f3a", MODE="0666", GROUP="plugdev"
+
+# When developing inside a Linux VM in top of Sculpt OS, it is useful to
+  add the following lines to '/config/usb' to ease the assignment of
+  the Pinephone's UART and fastboot devices to the virtual machine.
+
+  !<usb>
+  !  ...
+  !  <policy label_suffix="fastboot"      vendor_id="0x1f3a" product_id="0x1010"/>
+  !  <policy label_suffix="pinephoneuart" vendor_id="0x403"  product_id="0x6001"/>
+  !</usb>
+
+  This way, one can refer to those devices to the
+  _/config/launcher/usb_devices_rom_ configuration, e.g., by adding the
+  following two '<device>' nodes, VirtualBox is prompted to request the two
+  USB sessions using the specified labels.
+
+  !<inline>
+  !  <device label="pinephoneart"/>
+  !  <device label="fastboot"/>
+  !</inline>
+
+  Note that each reboot of the Pinephone results in a different 'fastboot' USB
+  device each time. In the current version of Sculpt, one needs to manually
+  trigger the re-request of the "fastboot" USB session be removing and
+  subsequently adding the corresponding '<device>' node manually.
+
+With these steps taken, Genode scenarios can be sent directly to the
+Pinephone using fastboot. Executing the framebuffer test has become as
+simple as
+
+! build/arm_v8a$ make run/framebuffer_pinephone KERNEL=hw BOARD=pinephone
+
+After rebooting the Pinephone and executing the command above, we are greeted
+with colorful patterns on the Pinephone's display and various messages of
+the framebuffer driver in Genode's log output.
+
+!Starting download of 1488896 bytes
+!...........
+!downloading of 1488896 bytes finished
+!## Booting kernel from Legacy Image at 42000800 ...
+!...
+!...
+!...
+![init -> fb_drv] sun6i-mipi-dsi 1ca0000.dsi: Attached device xbd599
+![init -> fb_drv] panel-sitronix-st7703 1ca0000.dsi.0: 720x1440@55 24bpp dsi 4dl - ready
+![init -> test-framebuffer] blue
+![init -> test-framebuffer] green
+![init -> test-framebuffer] red
+![init -> test-framebuffer] all colors mixed
+![init -> test-framebuffer] black & white stripes
+
+
+_Thanks to Ivan Loskutov for the fantastic hints of how to get fastboot to_
+_work with the Pinephone!_
+
