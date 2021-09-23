@@ -131,6 +131,15 @@ SD-card image has everything needed to use this mechanism.
 
   ! setenv fastboot_bootcmd bootm 0x42000800
 
+  The number 0x42000800 needs explanation. U-Boot's fastboot mechanism
+  downloads the data to a buffer configured at compile time using the
+  CONFIG_FASTBOOT_BUF_ADDR option. By default, the address is 0x42000000.
+  It is shown by U-Boot's 'help fastboot' command. But what's behind the
+  offset 0x800? Fastboot wraps the transferred data in a so-called Android
+  image. So the address 0x42000000 refers to the start of the Android image,
+  which happens to have a header of 0x800 bytes. The actual content - the boot
+  image we want to load - follows right after the header.
+
 # Furthermore, to shave off a few seconds from each test cycle, the
   customization of the 'bootdelay' environment variable may be considered.
 
@@ -212,6 +221,42 @@ the framebuffer driver in Genode's log output.
 ![init -> test-framebuffer] black & white stripes
 
 
+Booting Linux using fastboot
+----------------------------
+
+To quickly cross-correlate the behaviour of Genode and Linux during the
+porting of device drivers, it's handy to use the fastboot mechanism for Linux
+too. In contrast to a Genode boot image, a Linux boot requires three pieces,
+namely a Linux kernel image, a device-tree binary (dtb), and an initial
+ramdisk (initrd). We can use a so-called U-Boot FIT image as a carrier for
+all three pieces combined using the following command.
+
+! build/arm_v8a$ ./u-boot/pine/pinephone/tools/mkimage \
+!     -f auto -A arm64 -C none \
+!     -d ./a64_linux/arch/arm64/boot/Image \
+!     -b ./a64_linux/arch/arm64/boot/dts/allwinner/sun50i-a64-pinephone-1.2.dtb \
+!     -i /path/to/build-busybox-aarch64/initrd \
+!     -a 0x44000000 \
+!     lx.itb
+
+_It is highly recommended to use the 'mkimage' that comes along with our_
+_custom-built U-Boot to avoid subtle inconsistencies between the U-Boot_
+_version on the device and the tools installed on the host system._
+
+The resulting _lx.itb_ FIT image can be loaded to the Pinephone as soon as
+U-Boot has entered the fastboot mode.
+
+! build/arm_v8a$ fastboot boot lx.itb
+
+To supply a custom Linux kernel command line, one can set U-Boot's 'bootargs'
+environment variable. For reference, the following kernel command line enables
+early kernel output and debug messages.
+
+! setenv bootargs "earlyprintk earlycon debug rdinit=/bin/sh"
+! saveenv
+
 _Thanks to Ivan Loskutov for the fantastic hints of how to get fastboot to_
 _work with the Pinephone!_
+_Thanks to Christian Helmuth and Johannes Schlatow for their assistance with_
+_figuring out how to fastboot FIT images!_
 

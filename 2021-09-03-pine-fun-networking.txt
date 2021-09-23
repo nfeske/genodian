@@ -1101,3 +1101,10 @@ and extending the recipes until the binary archives are successfully built.
 !                            FORCE=1 \
 !                            UPDATE_VERSIONS=1
 
+
+What's next?
+------------
+
+In the next episode, we will move our focus from the Pine-A64-LTS board to
+the Pinephone.
+[https://genodians.org/nfeske/2021-09-20-pine-fun-pinephone-boot - Read on...]
