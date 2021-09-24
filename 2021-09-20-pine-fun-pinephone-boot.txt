@@ -81,16 +81,16 @@ support instead of FAT.
 Another noteworthy detail is the '$(SD_CARD_IMAGE_FILE)' rule, which
 creates a ready-to-use SD-card image that hosts only the boot loader. The rule
 documents the (fairly non-obvious) steps needed for partitioning and
-formatting of an SD card image that is works out of the box without any manual
+formatting of an SD card image that works out of the box without any manual
 tweaking needed.
 
 The _third_ piece of the puzzle is the automated creation of a bootable
 SD-card image for any given Genode system scenario using Genode's *run tool*.
 The solution comes in the form of the
 [https://github.com/nfeske/genode-allwinner/blob/master/tool/run/image/pine_uboot_sdcard - tool/run/image/pine_uboot_sdcard]
-plugin, with crafts an SD-card image containing U-Boot, a U-Boot runtime
+plugin, which crafts an SD-card image containing U-Boot, a U-Boot runtime
 configuration, and a Genode system image. It can be activated by adding the
-following line to the build directory's etc/build.conf file:
+following line to the build directory's _etc/build.conf_ file:
 
 ! RUN_OPT += --include image/pine_uboot_sdcard
 
@@ -117,7 +117,7 @@ U-Boot, the boot loader enters a fastboot mode that uses the USB OTG connector
 for receiving a stream of bytes before issuing a boot command.
 
 Using the u-boot/pine build target for 'BOARD=pinephone', the resulting
-SD-card image has everything needed to use this mechanism.
+SD-card image has everything needed for using this mechanism.
 
 # When booting this image, enter the boot prompt by hitting a key.
 
@@ -171,7 +171,7 @@ At the host side, the following steps must be taken.
   ! SUBSYSTEM=="usb", ATTR{idVendor}=="1f3a", MODE="0666", GROUP="plugdev"
 
 # When developing inside a Linux VM in top of Sculpt OS, it is useful to
-  add the following lines to '/config/usb' to ease the assignment of
+  add the following lines to _/config/usb_ to ease the assignment of
   the Pinephone's UART and fastboot devices to the virtual machine.
 
   !<usb>
@@ -180,7 +180,7 @@ At the host side, the following steps must be taken.
   !  <policy label_suffix="pinephoneuart" vendor_id="0x403"  product_id="0x6001"/>
   !</usb>
 
-  This way, one can refer to those devices to the
+  This way, one can refer to those devices in the
   _/config/launcher/usb_devices_rom_ configuration, e.g., by adding the
   following two '<device>' nodes, VirtualBox is prompted to request the two
   USB sessions using the specified labels.
@@ -192,7 +192,7 @@ At the host side, the following steps must be taken.
 
   Note that each reboot of the Pinephone results in a different 'fastboot' USB
   device each time. In the current version of Sculpt, one needs to manually
-  trigger the re-request of the "fastboot" USB session be removing and
+  trigger the re-request of the "fastboot" USB session by removing and
   subsequently adding the corresponding '<device>' node manually.
 
 With these steps taken, Genode scenarios can be sent directly to the
