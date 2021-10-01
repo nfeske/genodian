@@ -667,6 +667,34 @@ device to the driver. It is important to set the 'info' attribute to "yes",
 which allows the driver to read the device meta information given in the
 '<device>' node.
 
+Besides memory-mapped I/O registers, device interrupts are the second type of
+hardware resource of interest for device drivers. Sooner or later during the
+driver initialization, we encounter a message like the following.
+
+! [init -> emac_nic_drv] Error: irq 114 unavailable
+
+The driver requests GIC interrupt 114. To find out what's behind this number,
+the _flat_pine64lts.dts_ file is the right place for seeking the ground truth.
+Note that interrupt numbers as found in DTS files correspond to GIC interrupts
+numbers minus 32. So GIC interrupt 114 appears as number 114 - 32 = *82*. A
+search in the DTS file for this number leads us to the matching device.
+
+! emac: ethernet@1c30000 {
+!   ...
+!   reg = <0x01c30000 0x10000>;
+!   ...
+!   interrupts = <0 82 4>;
+!   ...
+! };
+
+This information is all we need to craft a corresponding '<device>' node for
+the platform-driver configuration.
+
+! <device name="emac" type="allwinner,sun50i-a64-emac">
+!   <io_mem address="0x1c30000" size="0x10000"/>;
+!   <irq number="114"/>
+! </device>
+
 
 Linux caveats
 #############
@@ -979,6 +1007,17 @@ tool is particularly nice. For capturing the traffic related to the MAC
 address of my board, the following command line does an excellent job:
 
 ! tshark -i eno1 -t ad -Y 'eth.addr == 02:ba:fe:7b:59:38'
+
+
+Using flood ping as a rudimentary stability check
+=================================================
+
+Once the driver has reached a seemingly operational state, having successfully
+completed DHCP, it is a good time to put some stress on the driver. As a
+litmus test, its interesting to see if a flood ping brings the driver to its
+knees:
+
+! sudo ping -f -c 1000 -s 1000 <ip-address>
 
 
 Cross-correlation against the Linux kernel behavior
