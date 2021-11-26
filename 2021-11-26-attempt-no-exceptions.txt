@@ -1,0 +1,168 @@
+
+
+                An 'Attempt' to avoid C++ exceptions
+
+
+Genode employs C++ exceptions for propagating errors, which is true to the
+language. However, the use and the mechanics of C++ exceptions comes with its
+own bag of problems. The upcoming Genode version 21.11 introduces a new
+error-handling pattern that will hopefully give us relief.
+
+
+Motivation
+----------
+
+In Section
+[https://genode.org/documentation/genode-foundations/21.05/under_the_hood/C++_runtime.html#Rationale_behind_using_exceptions - Rationale behind using exceptions]
+of the "Genode Foundations" book, we describe our justification of relying on
+the C++ exception mechanism throughout Genode.
+
+Even though we uphold this decision, we are time and time again confronted
+with downsides of this part of the C++ language.
+From our perspective, the most fundamental burden is the dependency of the
+exception mechanism from the presence of a dynamic memory allocator as used by
+the C++ runtime for the allocation of exception headers. In Genode's
+bare-bones version of the C++ runtime (w/o libc dependency), we employ a
+dedicated heap partition for those allocations. Unfortunately, this heap must
+be able to grow dynamically because there exists no meaningful upper bound for
+allocations on behalf of the C++ runtime. E.g., in a multi-threaded
+application, multiple exceptions may be in flight at the same time. Once the
+heap needs to grow and encounters an exceptional shortage of RAM on the
+attempt to allocate new backing store from Genode's core, this (arguably rare)
+condition raises
+[https://github.com/genodelabs/genode/issues/3612 - another exception].
+
+The bottom line is that the exception mechanism must not depend on the
+exception mechanism. Since the exception mechanism depends on dynamically
+allocated memory, Genode's code paths that are involved in memory allocations
+must not use exceptions. Now that exceptions are not available as a means to
+reflect error conditions for those parts of Genode, we need a different
+error-handling mechanism.
+
+The classical approaches like overloading return values with error codes, or
+the use of out parameters to carry return values are error prone. An elegant
+solution can be found in languages like Go or Python that support the
+returning of multiple distinct values, e.g., one for the actual value and one
+for an error code. In Rust, there is an option type that works like a tagged
+union. The C++ standard library features the 'std::optional' type. We figured
+that the Genode API needs a utility in the same spirit.
+
+
+Our take on passing errors as return values
+-------------------------------------------
+
+This new utility is called 'Attempt' and can be found at
+[https://github.com/genodelabs/genode/blob/staging/repos/base/include/util/attempt.h - util/attempt.h].
+Its name reflects is designated use as a carrier for return values. To
+illustrate its use, here is slightly abbreviated snippet of Genode's
+'Ram_allocator' interface:
+
+! struct Ram_allocator : Interface
+! {
+!   enum class Alloc_error { OUT_OF_RAM, OUT_OF_CAPS, DENIED };
+!
+!   using Alloc_result = Attempt<Ram_dataspace_capability, Alloc_error>;
+!
+!   virtual Alloc_result try_alloc(size_t size) = 0;
+!
+!   ...
+! };
+
+The 'Alloc_error' type models the possible error conditions, which were previously
+represented as exception types. The 'Alloc_result' type describes the return
+value of the 'try_alloc' method by using the 'Attempt' utility. Whenever
+'try_alloc' succeeds, the value will hold a capability (referring to a valid
+RAM dataspace). Otherwise, it will hold an error value of type 'Alloc_error'.
+
+At the caller side, the 'Attempt' utility is extremely rigid. The caller can
+access the value only when providing both a handler for the value and a
+handler for the error code. For example, with 'ram' being a reference to a
+'Ram_allocator', a  call to 'try_alloc' may look like this:
+
+! ram.try_alloc(size).with_result(
+!
+!   [&] (Ram_dataspace_capability ds) {
+!     ...
+!   },
+!
+!   [&] (Alloc_error error) {
+!     switch (error) {
+!
+!     case Alloc_error::OUT_OF_RAM:
+!       _request_ram_from_parent(size);
+!       break;
+!
+!     case Alloc_error::OUT_OF_CAPS:
+!       _request_caps_from_parent(4);
+!       break;
+!
+!     case Alloc_error::DENIED:
+!       ...
+!       break;
+!     }
+!   });
+
+Which of both lamba functions gets called depends on the success of the
+'try_alloc' call. The value returned by 'try_alloc' is only reachable by the
+code in the scope of the first lambda function. The code within this scope can
+rely on the validity of the argument.
+
+By expressing error codes as an enum class, we let the compiler assist us to
+cover all possible error cases (using switch). This a is nice benefit over the
+use of exceptions, which are unfortunately not covered by function/method
+signatures. By using the 'Attempt' utility, we implicitly tie functions
+together with their error conditions using C++ types. As another benefit
+over 'catch' handlers, the use of 'switch' allows us to share error handing
+code for different conditions by grouping 'case' statements.
+
+Note that in the example above, the valid 'ds' object cannot leave the
+scope of its lamba function. Sometimes, however, we need to pass a return
+value along a chain of callers. This situation is covered by the
+'Attempt::convert' method. Analogously to 'with_result', it takes two
+lambda functions as arguments. But in contrast to 'with_result', both lambda
+functions return a value of the same type. This naturally confronts the
+programmer with the question of how to convert all possible errors to this
+specific type. If this question cannot be answered for all error cases, the
+design of the code is most likely flawed.
+
+
+Application throughout the low-level parts of Genode
+----------------------------------------------------
+
+Given the motivation stated above, we applied the 'Attempt' pattern
+to Genode's low-level memory-allocation code first, namely core's
+PD session interface (for the allocation of RAM dataspaces), and the
+code related to the generic 'Allocator' interface (for the allocation of
+bytes). The latter is an extensive change, touching all implementations of
+this interface.
+
+To largely uphold compatibility with components using the original
+exception-based interface as a mere client - in particular use cases where an
+'Allocator' is passed to the 'new' operator - the traditional 'alloc' is still
+supported. But it exists merely as a wrapper around the new 'try_alloc'.
+However, the change does not preserve compatibility with the original
+'Range_allocator' interface. So users of this interface must be adapted.
+
+The experience with applying the 'Attempt' pattern was very re-assuring.
+Thanks to the unforgiving rigidity of the approach, the attention of the
+developer is drawn to each possible corner case, which revealed quite a few
+error conditions that remained unconsidered in our previous implementation.
+
+With respect to ergonomics, the pattern makes the code arguably more verbose.
+But on the other hand, it reinforces a good coding style. Since
+an 'Attempt' value cannot leave the scope of its 'with_result' handler function,
+it becomes natural to scope the code in the correct - as opposed ad-hoc - way.
+For example, when successively acquiring and accessing multiple resources
+(e.g., allocating a dataspace, mapping it locally, accessing the local mapping),
+the result of each step is visible only within the scope where the resource
+is actually available.
+
+As a rather striking anecdote, the rework of the Genode code base has caused
+almost no friction. Even though the change touches many guts deemed almost
+sacred, the change caused no visible regressions, which is unusual for a
+change of this magnitude.
+
+This positive experience makes me question the use of the C++ exception
+mechanism in Genode at large. The 'Attempt' pattern is not merely a viable
+alternative, it makes our code more robust and easier to reason about. For the
+longer term I cannot resist the question: Should we attempt going all in?
