@@ -1,0 +1,183 @@
+
+
+                  Let's make -Wconversion our new friend!
+
+
+Ten years ago, Christian Helmuth opened a Genode issue with the suggestion
+to enable warnings about implicit type conversions by default. Now that this
+issue has almost finished primary school, the time is ripe to attend it.
+
+I'm talking about [https://github.com/genodelabs/genode/issues/23 - Issue #23].
+As stated in the issue description, the '-Wconversion' compiler warnings
+trigger whenever an implicit type conversion is prone to losing information.
+
+As a bit a background, the C programming language automatically converts
+basic types whenever a meaningful conversion exists, catering
+the convenience of C programming and giving the source code a sense of clarity
+that would be spoiled by ugly casts everywhere. For example, if assigning
+an 'int' value to a 'char' value, one can write
+
+! int  a = 12;
+! char b = a;
+
+The 32-bit 'int' value is automatically converted into the 8-bit 'char' value.
+Similar conversion rules exist for most basic types, e.g., floating-point
+values are convertible to integer types without any fuss.
+C++ inherited these rules from C, and most C++ code bases today - Genode
+included - live and die with and by those rules.
+
+In practice, however, the convenience of implicit type conversions can
+sometimes hardly be distinguished from backstabbing. In contrast to Ada/SPARK
+that is really picky about losing information, C and C++ will happily and
+silently shave off excess bits when converting a value of a large type into a
+smaller one like in the 'int' to 'char' conversion above. The compiler
+assumes that the programmer knows best what the programmer wants.
+More often than not, that's of course overly optimistic. E.g., whereas the
+programmer thinks in terms of natural numbers, the computer works with measly
+modulo numbers all the time. Implicit type conversions sweep the mismatch
+between the mental model and reality under the carpet. While testing with
+reasonable input, this difference often doesn't show. But in the wild, the
+same program can end up in all kinds of trouble. A negative number can
+become a large positive one or vice versa. Most significant (!) bits
+disappear. Or the fractional part of a number gets lost. Silently.
+
+Genode's [https://genodians.org/nfeske/2019-01-22-conscious-c++ - programming style]
+rules out many classes of accidental programming errors, thanks to the
+combination of a deliberate selection of C++ features (no standard
+library), consistently applied programming patterns
+(like [https://en.wikipedia.org/wiki/Dependency_injection - dependency injection]),
+Genode's API design, and rather strict warning levels
+(e.g., '-Weffc++' combined with '-Werror').
+However, implicit type conversions remained a blind spot until now.
+Well, that's not entirely true. In fact, every now and then, when reviewing the
+backlog of Genode's
+[https://github.com/genodelabs/genode/issues - open issues],
+issue #23 stung into my eyes, which repeatedly prompted
+me to make a serious attempt at it. But usually, I resentfully retreated from
+this soul-destroying task after one or two days of working on it.
+
+This time is different. After the release of
+[https://genode.org/documentation/release-notes/21.11 - Genode 21.11],
+I gave this issue another go and marched on.
+The result will soon be merged into the staging branch.
+
+
+Change of the default warning level
+-----------------------------------
+
+By default, Genode components are built using the "strict" warning level
+that includes '-Wall', '-Wextra', '-Weffc++', '-Werror', and '-Wsuggest-override'.
+Now, this list will be extended by '-Wconversion'. Similar to how a
+component can opt out from the "strict" warning level by adding the line
+! CC_CXX_WARN_STRICT =
+to the build-description file, conversion warnings can deliberately be
+ignored by adding the line
+! CC_CXX_WARN_STRICT_CONVERSION =
+Once all components are adjusted, we may consider removing this
+CC_CXX_WARN_STRICT_CONVERSION hook.
+
+
+Initial code adjustments
+------------------------
+
+I adjusted most components found in Genode's main repository across all
+supported kernels. Whenever I was familiar with the code, I tried to
+tweak the used types to alleviate implicit conversions. Sometimes, I could
+observe some kind of snowball effect, ending up at the Genode API
+level. For example, VFS file operations like 'read' take a 64-bit
+size value as argument. The rationale for choosing this type was that
+files can be very large. So this seemed intuitively right. However, almost all
+implementations of this interface by VFS plugins need to internally prune the
+argument to 'size_t', which is a 32-bit type on 32-bit architectures.
+(Think of a communication buffer that is of course constrained by the virtual
+address space)
+This makes me question the use of the 64-bit size type for the _operation_.
+Granted, a file can be large. But does the VFS need to support _operations_
+larger then 4 GiB in a single step?
+
+Well, the time for answering this question is not now. In cases like these, I
+kept the existing interfaces and replaces former implicit casts by explicit
+casts. E.g., in the terminal VFS plugin, I changed the line
+! out_count = _terminal.write(src, count);
+to
+! out_count = _terminal.write(src, (size_t)count);
+
+I hear you say "that's ugly", and you are right! But the ugliness was
+there before, only it was invisible. Of course, I don't want to keep
+those nasty C-style casts that way. They are blemishes, raising questions,
+rightfully so. I hope that we can polish them away over time.
+
+There is a caveat I need to highlight. By replacing implicit casts by
+explicit casts - as I just did - errors could have slipped in. Imagine
+an implicit cast from a 32-bit value to a 16-bit 'short' value. If
+I mistakenly changed that to an explicit cast to a '8-bit' 'char' value,
+we'd loose more bits than before. But this time, the programmer has even
+expressed the _intention_ to strip off the bits, which is arguably worse.
+So the explicit casts are not a solution, they are crutch to get from
+point A to point B.
+
+
+Intermediate adjustments
+------------------------
+
+Once the initial '-Wconversion' patches have been merged, we should keep
+an eye on the components that still rely on
+'CC_CXX_WARN_STRICT_CONVERSION' (can be easily grep'ed for).
+These notably include components that use the _include/net/_ headers, which I
+haven't touched because I'm too unfamiliar with them.
+
+Next, we should continuously revisit the C-style explicit casts, for each
+cast either
+* Harmonizing the types and removing the cast, or
+* Adding the rationale as a comment, or
+* Convert the types in a manner more sensible than cutting off bits
+  of highest significance, for example by clamping values to the valid range
+  of the resulting type.
+
+
+Practical hints
+---------------
+
+I encountered a few places where I had to assign a value to a C-style
+bitfield member (e.g., in the bindings of some prehistoric L4 kernels).
+If a bitfield has only 5 bits, there exists no cast to squeeze a basic C type
+into it, even the 8 bits of a 'char' are too wide. In this case, the
+compiler can be convinced by explicitly masking out the upper bits. E.g.,
+in the example below, 'task' is a bitfield of 5 bits.
+
+! unsigned pd_id;
+! ....
+! thread.id.task = pd_id & 0x1f;
+
+There are cases where conversion warnings are caused by 3rd-party headers
+that are outside our reach. For example, hybrid Linux/Genode components
+need to include the headers installed at the host's _/usr/include/_ directory.
+Still, we want to let the compiler check _our_ custom code. In such cases, it
+is pragmatic to temporarily disable the warnings during the inclusion of the
+3rd-party headers, like so:
+
+! /*
+!  * Disable -Wconversion warnings caused by host headers
+!  */
+! #pragma GCC diagnostic push
+! #pragma GCC diagnostic ignored "-Wconversion"
+!
+! #include <sys/cdefs.h>
+! #include <linux/futex.h>
+! ...
+!
+! #pragma GCC diagnostic pop  /* restore -Wconversion warnings */
+
+
+Long-term benefits
+------------------
+
+During the initial rework, I already noticed an increased sense of assurance
+when working with the code. Similar to when we decided to treat '-Weffc++' and
+'-Wsuggest-override' warnings as errors, the '-Wconversion' warnings eliminate
+a whole category of uncertainties from our code.
+
+The result is arguably not quite at the same level as Ada/SPARK, which
+enforces ranges at compile time, but it is a significant - and practical -
+step in this direction. It will ultimately help us to ask questions before our
+code compiles, not after it misbehaves.
