@@ -1,0 +1,591 @@
+
+
+                         Genode's Browser Odyssey
+
+
+This article tells the twisted story behind Genode's native web browser,
+which is one of the most prominent achievements of the project during the
+past year. It is going to cover our motivation behind this undertaking,
+the rationale behind the choice of the browser engine, and many technical
+tidbits.
+
+_Before starting, let me give credits where credits are due. Most of_
+_the development described below was the work of my dear colleague_
+_Christian Prochaska, who relentlessly worked on the topic with a_
+_super-human level of patience. My role was for the most part watching_
+_in awe what he was doing._
+
+
+Motivation
+----------
+
+I think I'm not exaggerating when stating that the
+majority of application areas for computers and smartphones is covered
+by HTML5-based web applications, which are universally accepted by end
+users by now. By combining a modern web engine with Genode, we aim at
+making this wide variety of modern-day applications readily available on
+Genode. We are particularly interested in using those applications under
+Genode on the Pinephone.
+
+However, this is anything but an easy feat because web engines are not only
+among the most complex software stacks, but also moving targets. We
+nevertheless took the challenge of re-targeting a complete HTML5 browser
+engine to the Genode OS framework.
+The breadth and depth of this line of work has yielded invaluable insights
+into the practical challenges when combining a state-of-the-art browser
+engine with microkernel-based operating system technology. With breadth, I
+refer to the scope of challenges ranging from taming highly complex build
+systems, over the comprehension of the entire POSIX API surface and the
+whole stack of protocol layers including the C runtime,
+networking, multiple application frameworks, up to web-application
+interfaces. With depth, I refer to the need to look behind the curtains of
+all those layers when troubleshooting issues, e.g., like investigating
+memory-corruption bugs in JIT-compiled Javascript code originating from a
+remote website.
+
+
+Browser engines
+---------------
+
+The diversity of web-browser technology has dramatically
+decreased during the past decade.
+When it comes to modern open-source HTML5 engines that are compatible with the
+majority of modern web applications, there exist only three predominant
+competing implementations, namely WebKit developed by Apple, Gecko developed
+by the Mozilla Foundation, and Blink (Chromium) developed by Google.
+
+Mozilla's [https://en.wikipedia.org/wiki/Mozilla_gecko - Gecko engine]
+has a history reaching back to 1997 when it formed the
+basis of the Netscape Navigator. Today, it largely remains as the technology
+behind the Firefox web browser and the Thunderbird email client. Gecko is
+an open-source project under the Mozilla Public License, which is a weak
+copyleft license in the spirit of the Apache license.
+
+Apple's [https://en.wikipedia.org/wiki/Webkit - WebKit] was originally
+based on the KHTML engine of the [https://kde.org - KDE project].
+In the years after the fork, it got widely adopted beyond Apple's products.
+For example, Qt4's HTML5 support used to rely on WebKit. Also early
+versions of Google's Chrome browser employed this engine. WebKit is an
+open-source project using the weak copyleft LGPLv2 license and the liberal
+2-clause BSD license.
+
+Google's Blink engine is the basis of the
+[https://en.wikipedia.org/wiki/Chromium_(web_browser) - Chromium project],
+which in turn is the basis of the Chrome web browser. It originated as a fork
+of WebKit to foster Google's agenda to establish the browser as commodity
+runtime for end-user applications. Hence, Chromium introduced functionality
+that was previously considered as the domain of operating systems, e.g.,
+sandboxing, hardware-accelerated graphics (WebGL), webcam support, or audio.
+Chromium is an open-source project using mostly the liberal 2-clause BSD
+license.
+
+Today, Chromium is by far the most widely used browser engine. It has a market
+share of
+[https://en.wikipedia.org/wiki/Usage_share_of_web_browsers - more than 60%].
+Apple's WebKit remains mostly used
+by Safari and iOS with a market share of around 20%. In contrast, the
+market share of Mozilla's Gecko engine had dropped below 10%.
+
+The predominance of Chromium eventually prompted Microsoft to replace their
+former in-house-developed Internet Explorer with the Chromium-based Edge
+browser for the Windows operating system. As another former browser-engine
+vendor, Opera adopted Blink as the basis of their current offerings.
+
+Given the dominant market share of Chromium, developers of web applications
+increasingly focus their development and testing efforts on this single
+implementation. In fact, web applications are anecdotally known to work best
+on Chromium-based browsers.
+
+This consolidation is a two-edged sword. On the one hand, given that
+Chromium is an open-source project, it gives users and developers more
+freedom compared to the proprietary browser engines of the past. On the other
+hand, this technology is ultimately defined and controlled by a single
+vendor, which drives its development. Chromium is a combination
+of a fast-moving target and extremely high complexity. Because of Google's
+investment, the mind share behind the technology is effectively centralized
+and follows the corporate interests of the company. The complexity of the
+technology - regardless of its open source license - makes a
+community-governed fork practically impossible.
+
+To illustrate the latter point, Chromium consists of more than 17 million lines of
+source code (sloccount, not counting comments or white space), which is
+close to the entirety of the Linux kernel including all drivers and CPU
+architectures. In contrast to Linux, however, the direction of Chromium is
+controlled by a single vendor. To put those numbers into perspective, in
+terms of source code, the Chromium browser is around 50 times larger than
+the entire Genode operating-system project (with all of the more than 250
+components combined).
+
+; * Linux kernel: 21,179,705
+; * Genode including more than 250 components: 378,182
+
+Even though the near-monopoly position of Google in the browser
+space is unfortunate, there is no realistic alternative to Chromium for
+pursuing our goal to host a large share of popular applications on
+Genode, with low friction for the end user. So we had to accept the
+challenge to bring Chromium to life on top of Genode.
+
+
+Porting spree
+#############
+
+Our starting point was the [https://www.qt.io/ - Qt application framework].
+Qt is a popular and rich cross-platform application framework including a
+graphical widget tool kit and abstractions for the interaction between
+application software and the underlying operating system. Applications
+developed using the framework can be targeted at all platforms supported by
+Qt, which include Linux, Windows, and Mac OS X.
+
+Since more than 10 years, the Genode OS Framework supports the integration
+of Qt-based applications into Genode-based systems.
+The Qt framework is equipped with bindings for many popular open-source
+libraries. In particular, Qt version 4 supported bindings to the WebKit
+browser engine, which ultimately enabled us to bring the WebKit-based Arora
+browser to
+[https://genode.org/documentation/release-notes/10.05#Arora_web_browser - Genode in 2010].
+
+[image arora_screenshot]
+  The WebKit-based Arora browser running on Genode version 10.05.
+
+The feature set and dominance of Chromium prompted the Qt project to
+replace WebKit by the Chromium engine in Qt 5.4 in 2014.
+The integration of the Chromium engine in Qt5 is called QtWebEngine.
+However, for Genode's Qt5 port, we used to
+[https://genode.org/documentation/release-notes/13.08#Qt5_available_on_all_kernels - disregard QtWebEngine]
+as too complex. Whereas WebKit comprised 1.8 million lines of code,
+QtWebEngine is literally 10 times larger.
+
+However, now, with the goal of enabling the Chromium engine on Genode set,
+QtWebEngine looked like an attractive and attainable path forward, which
+would in principle allow us to reuse our existing integration of Qt with
+Genode for the browser's graphical user interface.
+
+
+Building from source for a known-to-work platform
+-------------------------------------------------
+
+To get acquainted with Chromium, we first took the beaten track of building
+QtWebEngine for one platform officially supported by the Qt project,
+namely Linux. For testing the result, we used a minimal browser example that
+comes shipped with Qt.
+
+The complexity of the Chromium code became immediately apparent. Even though
+we disabled a number of default features like geolocation, printing, PDF
+support, spell checking, WebRTC, or proprietary media codecs, our development
+machine equipped with a 16-core AMD EPYC 7302P processor took almost one hour to
+build QtWebEngine using '-j32'. The resulting libQt5WebEngineCore library has
+a stripped size of 132 MiB (741 MiB with debug information), which is by far
+the biggest build artifact we ever encountered.
+
+
+FreeBSD and Linux/ARM64 as intermediate targets
+-----------------------------------------------
+
+Genode's C runtime is based on FreeBSD's libc, which is subtly different from
+the glibc predominately used on Linux-based operating systems. To rule out
+incompatibility issues early on, we decided to first try building and using
+QtWebEngine on FreeBSD. Note that FreeBSD is not officially supported. But
+fortunately, a
+[https://svnweb.freebsd.org/ports/head/www/qt5-webengine/files/ - patch set]
+maintained by the FreeBSD community exists.
+Using the FreeBSD build, we could gradually strip down the external
+dependencies to only fontconfig and the nss library, both of which we manually
+disabled. The working build result on FreeBSD reinforced our confidence that a
+Genode build of QtWebEngine is in principle attainable.
+
+A second source of uncertainty was the unknown compatibility and performance of
+QtWebEngine on the 64-bit ARM architecture. To assess the risk, we built and
+tested the minimal browser example for Linux on the i.MX8 EVK board, which
+worked fine.
+
+Up until this point, all builds had been performed on target. When targeting Genode,
+however, we have to cross compile. To rule out possible cross-compiling
+issues and to find out the right hooks for passing compiler flags, we built
+the FreeBSD version of QtWebEngine on Linux and tested the result on FreeBSD
+on ARM64. Fortunately, we found that Qt's qmake build tool has a solid support
+for cross-compiling via configuration files (mkspecs).
+
+The experiment to cross-compile QtWebEngine for FreeBSD/ARM64 on Linux
+required us to create a custom mkspecs definition, which gave us the insights
+needed later for targeting Genode, e.g., the hooks for specifying the name of
+the tool chain. Further ingredients needed for the cross compilation were the
+FreeBSD headers and libraries, which we supplied by mirroring the corresponding
+directories from FreeBSD. Once the build succeeded, we were able to further
+reduce the gap towards Genode by gradually removing all FreeBSD headers not present
+on Genode. Whenever the removal of a header yielded a build failure, we
+patched the corresponding code and were able to immediately test the result on
+FreeBSD, walking on stable ground.
+
+
+Targeting Genode
+----------------
+
+Up to recently, the porting of software to Genode was generally conducted by
+transplanting the build rules for the 3rd-party software into Genode's build
+system. The complexity of Chromium, however, immediately rules out this
+traditional porting approach. So we picked up an alternative idea we
+investigated in the recent past.
+
+End of 2019, we started exploring the alternative approach of re-using
+3rd-party build systems to attain Genode executables via a custom meta-build
+tool called [https://github.com/nfeske/goa - Goa].
+Goa invokes 3rd-party build systems while supplying the
+right parameters for using Genode's tool chain, compile flags, headers, and
+linker scripts in order to attain Genode-compatible executables. Initially, we
+successfully applied the approach to CMake based build systems as well as
+Autoconf-based projects.
+
+Inspired by the promising results of Goa, we started using qmake in the same
+fashion, specifically by steering the build using a Genode-specific mkspecs
+definition. Once we attained working build results for Qt's base libraries
+like QtCore and QtGui, we turned our attention to QtWebEngine.
+
+The qmake-based build of QtWebEngine, in turn, invokes the Ninja build system
+used by the Chromium project. This cascaded use of build systems was not
+without trouble. We had to investigate the interplay between qmake and ninja
+to determine compile flags that were unexpectedly not passed correctly to ninja.
+E.g., we had to supplement the definition of ninja's 'extra_cflags' and
+'extra_cxxflags' from the corresponding 'QMAKE_CFLAGS' and 'QMAKE_CXXFLAGS'.
+
+Chromium relies on almost all facets of the standard C++ library, some of
+which were not covered by Genode ('std::thread', 'std::mutex'). We either
+disabled the corresponding code portions or supplemented the missing bits to
+Genode's standard C++ library.
+
+The ultimate result of this work was an executable binary along with the
+shared libraries for Qt5 and QtWebEngine that were presumably compatible with
+Genode.
+
+
+Runtime environment
+###################
+
+With the principle way of creating executable binaries for the browser and its
+libraries in place, the next step was running the binaries on top of Genode.
+At this point, Genode's cross-kernel ABI compatibility became an indispensable
+asset, which enabled us to test the initial operation of the browser on Linux
+using regular debugging tools like the GNU debugger.
+
+To name a few hurdles we had to address:
+
+* Genode's naming of shared libraries '*.lib.so' differs
+  from the conventional 'lib*.so' pattern.
+
+* The size of the QtWebEngine library exceeded Genode's so-called linker area,
+  which is a range of the virtual address space preserved for loading ELF
+  binaries. This prompted us the increase Genode's linker area from 256 MiB to
+  400 MiB across all platforms.
+
+* Genode's C runtime used to have an artificial limit of the maximum number
+  of 'atexit' handlers due to the use of a static array. Chromium exceeded this
+  limit by a wide margin, which prompted us to revise Genode's 'atexit'
+  handling, eventually removing the limit.
+
+* Chromium uses shared memory areas established by using 'mmap' with the
+  'MAP_SHARED' flag for exchanging data with a render thread, which is
+  normally executed as a distinct process. Genode's C runtime has no notion of
+  'MAP_SHARED'. We tackled this problem by emulating 'MAP_SHARED' via a
+  dedicated VFS plugin and by co-locating the render thread with the browser
+  process.
+
+* With those issues addressed, the minimal browser started to show its first
+  life signs but behaved rather erratically, crashing or displaying erroneous
+  graphical artifacts.
+  Most crashes resulted from thread-safety issues of Genode's version of
+  'getaddrinfo'. The graphical artifacts resulted from the missing 'MSG_PEEK'
+  support in Genode's version of 'recv'.
+  The combination of the enormous complexity, the indeterministic nature of
+  race conditions, and memory corruption made these issues extremely hard to find.
+  Once spotted, the fixes were relatively straight-forward.
+
+With the minimal browser example working, we turned our attention to building
+and packaging the Falkon browser based on QtWebEngine. Thanks to the
+integration of QtWebEngine with Qt's widget set, this initial version of
+Genode's Falkon port immediately appeared as a fairly complete web browser.
+
+[image falkon_screenshot 60%]
+  Early version of the port of the Falkon browser running on Genode
+
+At this point, we started the first baby steps for creating the 64-bit ARM
+version of the minimal browser, which predictably triggered a different set of
+problems. Given our experience with Java's JIT compiler with ARM's weak cache
+coherency, we expected similar problems with Chromium's Javascript engine.
+We found that Chromium invokes 'mprotect' as a mechnism to invalidate the
+instruction cache. So we mapped those calls to Genode's cache maintenance
+operations. With this problem solved, the minimal browser started successfully
+on 64-bit ARM, albeit running very slowly. The subsequent step of compiling
+the Falkon browser for 64-bit ARM too, succeeded with no further showstoppers.
+
+
+Corner cases, testing, optimization
+###################################
+
+With the initial version of the browser working, we started testing by using it
+directly on Genode's [https://genode.org/download/sculpt - Sculpt OS] and
+thereby discovered several corner cases and observed the severe need for
+optimization.
+
+For example, we found that the browser frequently obtains random
+numbers by accessing _/dev/urandom_, which we backed by the
+jitterentropy-based random number generator. Those random numbers are
+computationally fairly expensive. We could relieve the issue by combining
+jitterentropy with a cheap pseudo RNG (jitter_sponge).
+
+Furthermore, we optimized the 'select' mechanism of Genode's C runtime as well
+as the access of pthreads to sockets. Several related libc internal
+mechanisms received optimizations, in particular the access to thread-local
+storage and process-local inter-pthread synchronization.
+
+One break-through realization was the dimensioning of the memory limit of the
+Javascript engine, which happens to be determined by 'getrlimit'. Genode's
+version of this function did not return a meaningful value for 'RLIMIT_DATA',
+which resulted in a overly tight limit, severely impeding the performance and
+stability.
+
+Functionality-wise, we had to enable libnss for Genode, which is used by
+Chromium for the validation of SSL certificates.
+
+Most video-streaming sites deliver mp4 streams, which our version of Falkon
+did not support. To generally support media playback, we had to enable
+QtWebEngine's proprietary codecs.
+
+Even with the proprietary codes enabled, we faced a long standing issue with
+accessing YouTube on ARM. The Javascript engine would crash not long after
+YouTube presented its cookie-confirmation dialog. Our investigation led us into
+the inner guts of the Javascript's JIT compiler, which produced binary code
+with inter-thread synchronization issues. We ultimately found that the
+problematic code is actually never used in the Linux version of Falkon. It
+turns out that the difference was caused by the optimization
+_webengine-v8-snapshot_. Early on during our porting effort, we deliberately
+disabled this optimization to ease our life. With the optimization enabled,
+frequently used Javascript code is pre-compiled at the compilation time of the
+browser. The pre-compiled code works correctly. With the optimization
+disabled, the problem occurs on Linux as well. Hence we could side-step the
+problem by enabling the optimization.
+
+With this road block removed, we could finally celebrate playing YouTube
+videos on Genode.
+
+[image falkon_youtube 100%]
+  The Falkon web browser playing a YouTube video on Sculpt OS
+
+
+Media interfaces
+################
+
+With our aspiration to use Falkon on Genode for video-chat scenarios, we
+investigated the means to integrate the browser's media facilities with
+Genode's corresponding interfaces. We had three areas of interest, audio
+playback, audio capturing, and video capturing.
+Our goal is to keep our port of the browser as little invasive as possible to
+ease future updates of the QtWebEngine. Hence, instead of enhancing the browser
+with Genode support, we instead prefer to emulate existing and time-tested
+interfaces already supported by the browser.
+
+For audio, Genode already features an emulation of the OSS (open sound system)
+API in the form of a so-called VFS plugin. It transparently translates an
+application's interaction with a _/dev/dsp_ pseudo device to Genode's native
+audio interfaces. The browser employs a library called sndio that features a
+number of audio backends, with OSS being one option. Hence, sndio conveniently
+bridges the gap between Genode's OSS emulation and the browser's audio
+facilities.
+
+In the same spirit, we investigated possible options for video capturing and
+found three potential hooks, namely Video4Linux, fake (auto-generated test
+animation), or supplying a video file containing YUV pixel data as command-line
+argument. None of those options met our desire for a simple solution that
+could be easily integrated with Genode's existing capture session interface.
+However, thanks to the variety of video-capturing back ends that we could take
+as blue prints, it was relatively simple to supplement our own implementation.
+
+[image browser_media 100%]
+
+The image above illustrates the interplay of the browser with the
+pseudo devices provided by plugins for Genode's virtual file system.
+Thanks to this architecture, the Genode world remains cleanly separated from
+the POSIX world on top.
+
+With respect to video capturing on Genode, the capture service is provided by
+a clever combination of components depicted below.
+A second instance of the nitpicker GUI server is used as a video bridge between
+the USB webcam driver and the browser. Both parties connect to this nitpicker
+instance, which naturally controls the data path of the video stream. Hence,
+the capturing of the camera is completely decoupled from the browser.
+
+[image webcam_browser]
+  Data path between the webcam and the web browser
+
+In fact, the USB webcam subsystem that we added in the
+[https://genode.org/news/sculpt-os-release-21.10 - 21.10 release] of
+Sculpt OS, a disposable webcam driver is started and removed on
+demand depending on the presence of a capture client. This architecture
+ultimately clears the way to implement a camera kill switch that is out of
+reach of the (untrusted) browser, putting the user into the position of
+ultimate control over the camera.
+
+Regarding the capturing of audio data, we unfortunately found the sndio backend
+of the QtWebEngine underdeveloped. Even after updating the backend to a more
+recent version that presumably features audio capturing via sndio, we were
+unable to attain workable results.
+
+We ultimately decided to sidestep sndio by a custom written OSS backend that
+is specifically geared to the feature set provided by Genode's OSS emulation,
+largely avoiding complexity. With the custom OSS backend in place, we reached
+the principle functionality needed for video chat. Even though further
+optimization steps are needed for real-world use beyond technical
+demonstrations, the path towards using WebRTC-based video chat on Genode is
+cleared.
+
+
+Current state
+#############
+
+[image mnt_reform2_sculpt_21_10]
+  The Chromium-based Falkon web browser running on the 64-bit ARM
+  MNT-Reform open-hardware laptop
+
+
+Web-applications survey
+-----------------------
+
+As stated in the introduction, we pursued this challenging line of work in
+the hope to bring the wealth of modern web applications on Genode. We are
+happy that this claim came to fruition. In fact, we were able to use plenty of
+web applications in Genode's version of the Falkon web browser on Sculpt OS
+running on our regular laptops.
+
+* Editing documents using Google docs
+* Accessing E-Mail using Gmail and GMX
+* Using Google maps
+* Shopping on Amazon
+* Creating diagrams using [https://draw.io]
+* Interacting with collaboration solutions via [https://try.nextcloud.com]
+* Playing videos on YouTube
+* Using Github
+
+Since having integrated the web browser into the Genode-based Sculpt OS, using
+the browser has become daily routine for us Genode developers, which I would
+call a resounding success.
+
+
+State of the media features
+---------------------------
+
+We are currently in the process of maturing the browser's media capabilities
+by connecting the browser's media back ends to corresponding Genode services,
+most notably an audio driver (on x86 PC hardware) and a USB webcam driver on
+both ARM and PC hardware.
+Although we are happy to see the media features working in principle,
+we are not there yet, evidenced by audible distortions and latencies.
+Given the heavy work load and complexity of the browser,
+this is not surprising. To follow our ambition to host WebRTC-based video-chat
+scenarios on the resource-constrained Pinephone, however, we need to
+deeply understand and optimize those non-functional aspects.
+That's our motivation behind emphasizing quality-of-service topics on Genode's
+recently published [https://genode.org/about/road-map - road map for 2022].
+
+
+Interactive performance
+-----------------------
+
+We tested the browser on PC hardware as well as
+on 64-bit ARM hardware - specifically NXP's i.MX8 SoC - on Sculpt OS.
+
+On PC hardware, the browser's interactive performance is perfectly usable.
+Even heavy-weight websites like heise.de can be visited and scrolled without
+lagging. The user experience on ARM, however, is not satisfactory yet.
+The browser visibly overstresses the system. Even though it is functional,
+the response to user input has a perceivable latency and scrolling stutters.
+
+From cross-correlating Genode's version of Falkon with the same browser
+running on Linux, we learned that the performance of the ARM platform is not
+smooth in both cases. Genode's version of the browser is not far off the
+performance observed on Linux. However, we also observed that the Chromium
+browser (not Falkon) is able to attain a smooth performance on the same ARM
+platform. These tests hint at a promising potential for further optimization.
+In particular, the comparison of Falkon vs. Chromium on Linux hints at
+possible friction due to the integration of Chromium with Qt. It is tempting
+to investigate the interplay of Qt and Chromium - especially the response to
+user-input events - in detail.
+
+On both PC and ARM hardware, we observed the networking throughput as a
+bottleneck, in particular on websites that trigger a large number of TCP
+connections. Hence, Genode's TCP/IP protocol stack and its interplay with the
+C runtime looks like a rewarding optimization vector.
+
+Furthermore, we observed a noticeable effect of file-system used for the
+browser cache. Using an in-memory file system yields a visibly improved
+interactive performance over the use of a persistent file system, which we
+found surprising. Profiling the file-system access patterns of the browser
+might reveal further optimization opportunities.
+
+Finally, the use of multiple CPU cores has significant effects. The browser is
+a heavily multi-threaded application. Even with a moderately complex website
+like heise.de, the browser spawns over 40 threads. When spanning this workload
+over all four CPUs of the ARM platform, the inter-CPU cross-talk of the
+threads impedes the performance. On the other hand, the performance of only a
+single CPU does not suffice for an enjoyable user experience. We found the use
+of two CPUs - both distinct from the boot CPU - to be the sweet spot. However,
+the significant influence of the CPU resource partitioning hints at an
+untapped potential for optimization, either by pinning tightly coupled threads
+to individual CPUs according to prior knowledge or by balancing CPU loads
+dynamically.
+
+Many tempting topics to work on...
+
+
+Caveats
+-------
+
+The scope of web applications that immediately worked without flaws on
+Genode's version of the Falkon web browser is positively surprising.
+However, while test-driving WebRTC clients - in particular Jitsi - we
+already experienced the browser as a steadily moving target. Depending on
+the combination of browser versions and Jitsi versions, establishing
+a bi-directional video chat was a hit-and-miss experience. The best results
+could be obtained by hosting a controlled instance of Jitsi with a
+known-to-work version whereas the official version hosted at
+[https://meet.jit.si] behaved rather erratically. E.g., the press of the
+button to join a chat would not be recognised with the version of Chromium we
+are using. This is notably not an issue of our port of the Falkon browser but
+can be reproduced on the upstream version of the browser on commodity Linux
+systems as well. Similar erratic behavior could be observed when using Firefox
+on Linux.
+
+From these observations, we take that the implementation of the web standards
+that underpin current WebRTC-based solutions are anything but stable. In
+contrary, the solutions seem to be tied to most recent browser versions.
+Browsers must be continuously updated in order to uphold functionality, which
+brings us back to the tight dependency on a single vendor as discussed in
+the introduction.
+
+
+Future
+------
+
+There are two possible avenues to counter the moving-target nature of
+browser-based WebRTC solutions. First, by hosting a known-to-work version of
+the server software inside a (virtual) private network, i.e., secured via
+Wireguard. Second, by keeping up Genode's version of the browser with the
+upstream version of Chromium. It goes without saying that the latter
+requires continuous effort.
+
+Our future will be a mix of both approaches. Thanks to the way of how we
+interfaced the browser with Genode - largely without code modifications of the
+browser - we expect browser updates to stay economically viable when pursued
+at bi-annual intervals. Unfortunately, the nature of the browser as a moving
+target comes with the risk of regressions, which cannot be ruled out and may
+require unplanned debugging and testing efforts. We have to accept this
+risk.
+
+For the reliable collaboration of a closed group, a fixed
+and known-to-work combination of a browser version and server version,
+protected by a VPN, is an attractive alternative because regressions cannot
+occur. When employing Genode's strong sandboxing capabilities combined with a
+secure VPN solution, the use of a slightly outdated browser version as a WebRTC
+appliance strongly sandboxed by Genode, does not pose a risk. We do not trust
+the browser anyway, after all. We plan to pursue this direction by combining
+the Wireguard VPN solution with Genode.
+
+Have I mentioned that Wireguard is featured on our road map for this year?
+
