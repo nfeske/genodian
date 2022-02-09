@@ -299,7 +299,7 @@ intermediate result.
 
 :Git repository of the Allwinner board support:
 
-  [https://github.com/nfeske/genode-allwinner]
+  [https://github.com/genodelabs/genode-allwinner]
 
 
 The simple log-test scenario above is just the beginning.

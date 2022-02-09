@@ -667,16 +667,16 @@ Public repository
 
 The test programs described above can be found at the following Git
 repository. The C++ code is located at
-[https://github.com/nfeske/genode-allwinner/tree/master/src/test/pin_state - src/test/pin_state/],
-[https://github.com/nfeske/genode-allwinner/tree/master/src/test/pin_control - src/test/pin_control/],
+[https://github.com/genodelabs/genode-allwinner/tree/master/src/test/pin_state - src/test/pin_state/],
+[https://github.com/genodelabs/genode-allwinner/tree/master/src/test/pin_control - src/test/pin_control/],
 and
-[https://github.com/nfeske/genode-allwinner/tree/master/src/test/pin_interrupt - src/test/pin_interrupt/].
+[https://github.com/genodelabs/genode-allwinner/tree/master/src/test/pin_interrupt - src/test/pin_interrupt/].
 These test programs are accompanied with matching run scripts located at the
-[https://github.com/nfeske/genode-allwinner/tree/master/run - run/] directory.
+[https://github.com/genodelabs/genode-allwinner/tree/master/run - run/] directory.
 
 :Git repository of the Allwinner board support:
 
-  [https://github.com/nfeske/genode-allwinner]
+  [https://github.com/genodelabs/genode-allwinner]
 
 
 In the next part, we mold the results of the experiments into a proper driver

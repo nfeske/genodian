@@ -22,7 +22,7 @@ the _genode-allwinner_ repository.
 
 :Git repository of the Allwinner board support:
 
-  [https://github.com/nfeske/genode-allwinner]
+  [https://github.com/genodelabs/genode-allwinner]
 
 
 Overview
@@ -145,7 +145,7 @@ _src/drivers/nic/emac/_.
 This directory will host the following files, for which we can initially
 create skeleton versions based on one of the already existing drivers. E.g.,
 one may take the
-[https://github.com/nfeske/genode-allwinner/tree/master/src/drivers/nic/emac - emac driver]
+[https://github.com/genodelabs/genode-allwinner/tree/master/src/drivers/nic/emac - emac driver]
 as reference when porting a new network driver.
 
 :target.mk: The build-description file of the driver
@@ -216,7 +216,7 @@ Build magic
 When reviewing the _target.mk_ file of the emac driver, it is obvious that
 there must be more to the build rules than those few dull lines. The magic
 happens in the lib-import file
-[https://github.com/nfeske/genode-allwinner/blob/master/lib/import/import-a64_lx_emul.mk - import-a64_lx_emul.mk].
+[https://github.com/genodelabs/genode-allwinner/blob/master/lib/import/import-a64_lx_emul.mk - import-a64_lx_emul.mk].
 This file is supplemented to the build process because the _target.mk_
 specifies _a64_lx_emul_ as a library dependency.
 
@@ -247,10 +247,10 @@ Generated Linux headers
 The Linux build system generates a number of header files when preparing a
 build directory. When compiling Linux code outside the Linux build system - as
 we do - those headers are badly missed. This is where the
-[https://github.com/nfeske/genode-allwinner/blob/master/lib/mk/spec/arm_v8/a64_linux_generated.mk - a64_linux_generated]
+[https://github.com/genodelabs/genode-allwinner/blob/master/lib/mk/spec/arm_v8/a64_linux_generated.mk - a64_linux_generated]
 library comes in. This pseudo library has the sole purpose of creating a Linux
 build directory with the generated headers we need. It takes the same Linux
-[https://github.com/nfeske/genode-allwinner/blob/master/src/a64_linux/target.inc - kernel configuration]
+[https://github.com/genodelabs/genode-allwinner/blob/master/src/a64_linux/target.inc - kernel configuration]
 as used for the a64_linux target we discussed earlier in
 [https://genodians.org/nfeske/2021-05-12-pine-fun-linux - Taking Linux out for a Walk].
 
@@ -1026,7 +1026,7 @@ Cross-correlation against the Linux kernel behavior
 Sharing one Linux kernel configuration among both our bare-bones Linux kernel
 and the ported driver code allows for the detailed cross-correlation of the
 driver behavior. This consistency is fostered by the
-[https://github.com/nfeske/genode-allwinner/blob/master/src/a64_linux/target.inc - src/a64_linux/target.inc]
+[https://github.com/genodelabs/genode-allwinner/blob/master/src/a64_linux/target.inc - src/a64_linux/target.inc]
 file that is used by both the a64_linux target (configuring and building a
 Linux kernel) and each driver component (via the a64_linux_generated library).
 This way, any instrumentation of the Linux kernel code can be quickly tested
@@ -1080,7 +1080,7 @@ The second part - bridging the gap between the Linux kernel code and Genode's
 session interface - can best be addressed by the
 [https://github.com/genodelabs/genode/blob/master/repos/os/include/genode_c_api/uplink.h - genode_c_api/uplink.h]
 API and an implementation of the driver's
-[https://github.com/nfeske/genode-allwinner/blob/master/src/drivers/nic/emac/lx_user.c - lx_user.c],
+[https://github.com/genodelabs/genode-allwinner/blob/master/src/drivers/nic/emac/lx_user.c - lx_user.c],
 which connects the 'genode_c_api' with the Linux netdevice interface.
 
 
@@ -1104,7 +1104,7 @@ generated via following command (the paths are abbreviated).
 !               generate
 
 As reference for the recipe files needed, the depot recipes at
-[https://github.com/nfeske/genode-allwinner/tree/master/recipes - allwinner/recipes/]
+[https://github.com/genodelabs/genode-allwinner/tree/master/recipes - allwinner/recipes/]
 are helpful. Their roles are as follows:
 
 :recipes/api/a64_linux/: This API recipe contains the parts of the Linux source tree

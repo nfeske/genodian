@@ -758,8 +758,8 @@ The _src/linux/_ subdirectory contains the source tree of the kernel.
 
 Finally, to conserve the information about configuring and building a Linux
 kernel tailored to our porting work, I added a Genode build target at
-[https://github.com/nfeske/genode-allwinner/blob/master/src/a64_linux/target.mk - allwinner/src/a64_linux/target.mk] /
-[https://github.com/nfeske/genode-allwinner/blob/master/src/a64_linux/target.inc - target.inc],
+[https://github.com/genodelabs/genode-allwinner/blob/master/src/a64_linux/target.mk - allwinner/src/a64_linux/target.mk] /
+[https://github.com/genodelabs/genode-allwinner/blob/master/src/a64_linux/target.inc - target.inc],
 which applies the kernel configuration and builds the kernel image.
 Thanks to this _target.mk_ file, the custom Linux kernel can be built
 from within Genode's build directory via:

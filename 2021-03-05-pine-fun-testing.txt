@@ -641,7 +641,7 @@ You can find the latest version of the work at the following Git repository.
 
 :Git repository of the Allwinner board support:
 
-  [https://github.com/nfeske/genode-allwinner]
+  [https://github.com/genodelabs/genode-allwinner]
 
 
 The [https:2021-03-17-pine-fun-device-access - next article] of the series

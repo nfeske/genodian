@@ -66,7 +66,7 @@ located, drivers usually reside in a subdirectory of _src/drivers/_ that
 corresponds to the primary purpose of the driver. E.g., framebuffer drivers
 are located at _src/drivers/framebuffer/_. Our designated driver drives
 GPIO pins. So I settled on placing it at _src/driver/pin/a64/_ within the
-[https://github.com/nfeske/genode-allwinner - genode-allwinner repository].
+[https://github.com/genodelabs/genode-allwinner - genode-allwinner repository].
 With the complicated naming-things-topics behind us, let's turn our attention
 to the run script, appropriately named _a64_pio_drv.run_.
 
@@ -176,11 +176,11 @@ to the run script, appropriately named _a64_pio_drv.run_.
   ! run_genode_until forever
 
 For reference you can find a commit for this step
-[https://github.com/nfeske/genode-allwinner/commit/febf53b8ad6819757eeeaf20eeb1b634ade0b668 - here].
+[https://github.com/genodelabs/genode-allwinner/commit/febf53b8ad6819757eeeaf20eeb1b634ade0b668 - here].
 
 To exercise the interplay between the designated PIO driver with the platform
 driver, it is a good idea to transplant the
-[https://github.com/nfeske/genode-allwinner/blob/pio/src/test/pin_state/main.cc - test/pin_state]
+[https://github.com/genodelabs/genode-allwinner/blob/pio/src/test/pin_state/main.cc - test/pin_state]
 program of the previous article from the use of core's services to the use of
 the platform driver. The following snippet highlights the important changes.
 
@@ -301,11 +301,11 @@ _we may address it by dedicated session type._
 
 At the time of writing, the "Pin_state" and "Pin_control" session interfaces
 still reside
-[https://github.com/nfeske/genode-allwinner/tree/master/include - local]
+[https://github.com/genodelabs/genode-allwinner/tree/master/include - local]
 to the genode-allwinner repository.
 The corresponding commit comprising the interfaces along with SoC-agnostic
 utilities to implement them is
-[https://github.com/nfeske/genode-allwinner/commit/90bdedfff9894a300fdd1a6c508e48d588aa11a0 - here].
+[https://github.com/genodelabs/genode-allwinner/commit/90bdedfff9894a300fdd1a6c508e48d588aa11a0 - here].
 After a period of time-testing, they will eventually become part of the Genode
 API, replacing the traditional "Gpio" session interface.
 
@@ -315,7 +315,7 @@ PIO device driver
 
 The A64 PIO driver implements the three session interfaces outlined above.
 It resides at
-[https://github.com/nfeske/genode-allwinner/tree/master/src/drivers/pin/a64 - src/drivers/pin/a64]
+[https://github.com/genodelabs/genode-allwinner/tree/master/src/drivers/pin/a64 - src/drivers/pin/a64]
 within the genode-allwinner repository. The accompanied README covers the
 details about its use and configuration.
 
@@ -340,7 +340,7 @@ functionality, the driver also offers the selection of pin functions
 beyond <in> and <out>.
 
 For reference, the commit for the driver implementation can be found
-[https://github.com/nfeske/genode-allwinner/commit/11ec1ae2b8fe39de4f8059eb1e28c9a1bcb263a5 - here].
+[https://github.com/genodelabs/genode-allwinner/commit/11ec1ae2b8fe39de4f8059eb1e28c9a1bcb263a5 - here].
 A few technical tidbits and caveats I encountered during its development are
 worth sharing:
 
@@ -348,7 +348,7 @@ worth sharing:
 
   The actual interplay of the driver with the hardware registers is completely
   covered by the code found in
-  [https://github.com/nfeske/genode-allwinner/blob/master/src/drivers/pin/a64/pio.h - pio.h].
+  [https://github.com/genodelabs/genode-allwinner/blob/master/src/drivers/pin/a64/pio.h - pio.h].
   Genode's 'Mmio' framework API makes this code strikingly simple, almost
   self-describing. There is no manual bit fiddling to be found, thanks to the
   wonderful 'Register_array'.
@@ -359,7 +359,7 @@ worth sharing:
 
   The boring part models the SoC-specific terminology as a bunch of
   corresponding C++ types. In
-  [https://github.com/nfeske/genode-allwinner/blob/master/src/drivers/pin/a64/types.h - types.h]
+  [https://github.com/genodelabs/genode-allwinner/blob/master/src/drivers/pin/a64/types.h - types.h]
   one can find types for any term we deal with - however boring it is. Most of
   these types have a local 'Value' type that is as rigid as possible. E.g.,
   the 'Pull' type contains an enum with the values DISABLE, UP, and DOWN as
@@ -374,7 +374,7 @@ worth sharing:
   simple and easy to assess for correctness.
 
   The interesting part lives in the
-  [https://github.com/nfeske/genode-allwinner/blob/master/src/drivers/pin/a64/main.cc - main.cc]
+  [https://github.com/genodelabs/genode-allwinner/blob/master/src/drivers/pin/a64/main.cc - main.cc]
   file where all the strings are coming together.
 
 :Stumbling blocks:
@@ -542,7 +542,7 @@ Integrated test scenario
 ------------------------
 
 The final version of the
-[https://github.com/nfeske/genode-allwinner/blob/master/run/a64_pio_drv.run - a64_pio_drv.run]
+[https://github.com/genodelabs/genode-allwinner/blob/master/run/a64_pio_drv.run - a64_pio_drv.run]
 script contains the combinations of the various fragments discussed above.
 It test-drives the dynamic re-configurability of the PIO driver along with
 the "Pin_state", "Pin_control", and IRQ session interfaces.

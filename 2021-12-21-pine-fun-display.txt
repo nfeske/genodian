@@ -123,7 +123,7 @@ To find the smallest possible selection of kernel configuration parameters,
 the bisecting approach that we previously used for isolating the network
 driver becomes handy again. Without further ado, here comes the solution
 as supplement for our
-[https://github.com/nfeske/genode-allwinner/blob/master/src/a64_linux/target.inc - target.inc].
+[https://github.com/genodelabs/genode-allwinner/blob/master/src/a64_linux/target.inc - target.inc].
 
 ! # framebuffer driver
 ! LX_ENABLE += DRM DRM_SUN4I DRM_SUN8I_MIXER DRM_SUN8I_DW_HDMI
@@ -295,5 +295,5 @@ colorful display for a bit.
 
 For reference, the entire commit for the monolithic framebuffer driver can
 be found
-[https://github.com/nfeske/genode-allwinner/commit/c1d088ef5d9d4c82ffa761f672c33f70431dec31 - here].
+[https://github.com/genodelabs/genode-allwinner/commit/c1d088ef5d9d4c82ffa761f672c33f70431dec31 - here].
 

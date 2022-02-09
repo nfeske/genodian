@@ -36,14 +36,14 @@ version of U-Boot, which comprises the *downloading* (and potentially patching)
 of the source code and its dependencies. In Genode, this step is covered by
 the so-called _ports_ tool, which installs 3rd-party software according
 to a port description. In the case at hand, the port description file is
-[https://github.com/nfeske/genode-allwinner/blob/master/ports/pine_uboot.port - ports/pine_uboot.port].
+[https://github.com/genodelabs/genode-allwinner/blob/master/ports/pine_uboot.port - ports/pine_uboot.port].
 The port consists of two parts that are mandatory for building U-Boot for
 the platform, namely U-Boot itself and the so-called ARM Trusted Firmware.
 Each of both parts is obtained from a separate Git repository.
 
 The _second_ part is the *compile-time configuration* and the actual *build*
 process of U-Boot. Here, Genode's build system comes in. The build target
-[https://github.com/nfeske/genode-allwinner/blob/master/src/u-boot/pine/target.mk - u-boot/pine/target.mk]
+[https://github.com/genodelabs/genode-allwinner/blob/master/src/u-boot/pine/target.mk - u-boot/pine/target.mk]
 conserves all the magic spells needed to bake a U-Boot binary that is known
 to work well on the targeted board. From a Genode build directory, it can
 be invoked via:
@@ -87,7 +87,7 @@ tweaking needed.
 The _third_ piece of the puzzle is the automated creation of a bootable
 SD-card image for any given Genode system scenario using Genode's *run tool*.
 The solution comes in the form of the
-[https://github.com/nfeske/genode-allwinner/blob/master/tool/run/image/pine_uboot_sdcard - tool/run/image/pine_uboot_sdcard]
+[https://github.com/genodelabs/genode-allwinner/blob/master/tool/run/image/pine_uboot_sdcard - tool/run/image/pine_uboot_sdcard]
 plugin, which crafts an SD-card image containing U-Boot, a U-Boot runtime
 configuration, and a Genode system image. It can be activated by adding the
 following line to the build directory's _etc/build.conf_ file:
