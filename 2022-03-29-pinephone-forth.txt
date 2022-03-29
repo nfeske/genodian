@@ -1,0 +1,432 @@
+
+
+                    Darling, I FORTHified my Pinephone!
+
+
+This is my experience story behind Genode's forthcoming custom firmware for
+the Pinephone's AR100 system-control processor (SCP). It makes a case for using
+Forth for implementing SCP functionality and describes the process of bringing
+Forth to the OpenRISC instruction-set architecture.
+
+
+Forth
+#####
+
+Ever since I encountered the article "Forth: The Hacker’s Language"
+[https://news.ycombinator.com/item?id=13505285 - on HN], I got intrigued.
+The language - invented 1968 by Chuck Moore for controlling telescopes -
+grew popular in the 1980's but largely vanished from the public
+eye during the 1990's when the lineage of C-inspired programming languages
+including C++ and Java became dominant. Our today's universal expectation of
+how a proper programming language looks and smells was probably formed in this
+period. Like, we put the '+' in the middle when adding two numbers, correct?
+Who would dispute that?
+
+Well, there is LISP, which puts the '+' to the left of the two numbers.
+
+And then, there is Forth, which puts the '+' to the right of the two numbers.
+
+The former, I certainly encountered at the university but it did not capture
+my imagination. The latter, I have never spotted in the wild after I booted a
+figFORTH disk on my Atari 800XE in 1992 and did not know what to type.
+
+Now, literally decades later, the
+[https://hackaday.com/2017/01/27/forth-the-hackers-language/ - article]
+mentioned above made me suddenly question my preoccupation with putting the
+'+' in the middle. Why is that? The promises of Forth sounded too phenomenal
+to be true and spawned my curiosity:
+
+* Forth can be bootstrapped from about 1000 lines of assembly code
+  as demonstrated by [https://github.com/nornagon/jonesforth - Jonesforth]
+  with no further compiler infrastructure needed. That's the complete
+  opposite to the craziness of tool complexity that we normally face.
+
+* Control structures like loops are implemented in the language itself!
+  This also goes for concepts like exception-based error handling or
+  object-oriented programming. How can this even work?
+
+* Forth is interactive but it is also a compiler. Programs can perform fast.
+  The language presumably lends itself to meta programming.
+
+* Forth puts no obstacles in the way between the programmer and the hardware.
+  Its low footprint make it suitable for tiny micro-controllers with just
+  a few KiB of memory. Some programmers go as far as generating machine
+  opcodes directly from Forth code.
+
+The investigation of those points gave me countless of wonderful leisure
+evening hours. I got my toes wet with
+[https://www.forth.com/starting-forth/0-starting-forth/ - "Starting FORTH"]
+and nodded along in ave while reading
+[http://thinking-forth.sourceforge.net/ - "Thinking FORTH"].
+On other evenings, I enjoyed the rumblings of [http://www.ultratechnology.com/ - Jeff Fox],
+or tried to wrap my head around the clever tricks of [https://colorforth.github.io/ - Colorforth],
+or enjoyed the many insights of
+[https://kestrelcomputer.github.io/kestrel/ - Samuel A. Falvo II]
+served on a silver tablet. I found the trail of work of individuals like
+[https://bernd-paysan.de/ - Bernd Paysan] truly inspiring, dabbling with
+his bigFORTH on my Atari Falcon and playing with Gforth on my MNT Reform.
+Then, there is whole universe of the archived
+[http://forth.org/fd/contents.html - Forth Dimensions] magazines, with
+a history that reaches all the way back to 1978.
+The German counterpart
+[https://wiki.forth-ev.de/doku.php/vd-archiv - "Vierte Dimension"] is
+still published four times a year! Works of love like the
+[https://wiki.forth-ev.de/lib/exe/fetch.php/vd-archiv:4d2015-arm.pdf - 2015 ARM Sonderheft]
+expanded my mind in the best ways possible.
+
+I took the learning and playing with Forth as a nice counter balance to
+my main dedication to Genode, which makes me deeply entrenched with C++.
+So I did not try too hard to draw any connection between Forth and Genode.
+
+
+The Pinephone's system-control processor
+########################################
+
+As documented by my [https://genodians.org/nfeske/index - Pine fun] article
+series, I'm pursuing the vision of a Genode-based smart phone with the
+Pinephone being the hardware platform of choice. When speaking of mobile
+phones, one of the most central topics is battery time, which
+ultimately led my attention to the so-called system-control processor (SCP).
+In modern ARM SoCs, the actual application processor has a little sidekick
+called SCP that can be powered independently from the high-performance
+ARM cores.
+The architecture diagram in
+[https://linux-sunxi.org/images/b/b4/Allwinner_A64_User_Manual_V1.1.pdf - A64 manual]
+on page 78 shows the SCP at the upper-right corner.
+
+[image a64_diagram_scp]
+
+The basic idea behind the architecture is that the management of power can be
+implemented independently from the chip that is being managed. Think of a
+suspend-resume cycle of the ARM CPU that relies on DRAM. The DRAM can be put
+into the energy-saving self-refresh mode not before the ARM CPU is down. But
+once it is down, it can no longer mingle with the DRAM controller. Vice versa,
+upon wakeup, the ARM CPU can not perform the sequence of steps for bringing
+itself up. Here is where the little low-power companion SCP becomes handy.
+
+Surprisingly, even though the intended purpose is rather narrow, the SCP is a
+freely programmable general-purpose CPU with ultimate access to every corner
+of the SoC. It can control all peripherals including the modem, and
+access the entirety of physical memory.
+From a security and privacy perspective, the usual practice of operating an
+SCP with proprietary firmware in consumer devices is highly suspect.
+Fortunately, the Pinephone community has long shun the proprietary blobs. It
+has been replaced by the so-called [https://github.com/crust-firmware/crust - Crust]
+firmware. Besides creating the firmware, developer Samuel Holland
+tirelessly documented his findings around the SCP of the A64 SoC aka AR100.
+
+:Details and known limitations of the AR100:
+
+  [https://linux-sunxi.org/AR100]
+
+:Interplay of the AR100 with the ARM CPU on the A64 SoC:
+
+  [https://linux-sunxi.org/AR100/HardwareSharing]
+
+The AR100 is based on the [https://openrisc.io/ - OpenRISC] instruction-set
+architecture. OpenRISC (or1k) was one of flagship projects of the
+[https://opencores.org/ - OpenCores] initiative in the early 2000s long before
+open-source IP cores became fashionable.
+It is similar to MIPS or RISC-V. The 32-bit processor has 16 general-purpose
+registers, load-store architecture, and fixed-length instructions. When its
+ISA was conceived, it was still popular to expose pipeline effects at the ISA
+level via so-called branch-delay slots. The single instruction that follows a
+branch instruction is executed, which can trip up the reading of assembly
+code quite a bit. The concrete version of the OpenRISC used for the AR100
+has a few [https://linux-sunxi.org/AR100#Known_issues - known issues] such
+as the support for the carry bit missing.
+
+Even though OpenRISC is not a household name, it is officially supported by
+GNU binutils and GCC, and Qemu can handle it out of the box. The loading of
+SCP firmware on the Pinephone is routinely done by U-Boot in concert with the
+ARM Trusted Firmware.
+
+Speaking of loading the SCP firmware, there is one interesting constraint: In
+order to operate independently from the DRAM, the AR100 is able to execute in a
+dedicated but rather small SRAM, which has a distinct power supply. This
+means, the AR100 can live even with DRAM powered off, which is nice. However,
+this also means that the firmware must fit into the tiny SRAM. To make matters
+a bit more hairy, most of the SRAM is already occupied by the ARM Trusted
+Firmware, which leaves merely 16 KiB to the AR100
+(the [https://github.com/crust-firmware/crust/blob/master/docs/abi.md - Crust ABI]
+documentation goes into details).
+
+With that little memory, the fixed-function feature set of the Crust firmware
+is rather constrained, which is perfectly fine for augmenting a Linux
+system with suspend-resume functionality. But for running Genode on the
+Pinephone, I'd like to move more freely, e.g., letting the SCP interact
+with the modem while the application processor is powered off.
+
+I wondered, could Forth and the AR100 be a good match?
+
+
+Custom Forth-based SCP firmware
+###############################
+
+The recent annual New-Year's holiday lock-down was the perfect opportunity
+to exercise the idea of bootstrapping a custom Forth on the OpenRISC
+architecture.
+The primary inspiration for the implementation was the "eForth and Zen"
+document by Dr. C. H. Ting.
+
+:eForth and Zen:
+
+  [https://forth.org/OffeteStore/OffeteStore.html]
+
+I took the text almost as a guide, reading it step by step, translating what I
+learned into my domain of GNU assembler and OpenRISC, solidifying my thoughts,
+playing around with optimization ideas, and once when being satisfied taking
+the next step.
+
+For the initial work, I used the [https://github.com/openrisc/or1ksim - or1ksim]
+simulator that is accompanied with very nice documentation and is easy to
+modify. For example, thanks to its clear code structure, I could tweak the
+virtual UART to 32-bit bus accesses as used on the A64 in a matter of minutes.
+
+After getting a simple OpenRISC  assembler program to output some hexadecimal
+numbers over the virtual serial interface, I started followed the "eForth and
+Zen" path. Since my main constraint is memory I always steered design
+decisions into the direction of conserving RAM. I found the following notes
+worth taking.
+
+Direct versus indirect threading
+--------------------------------
+
+Originally I was after building a direct threaded interpreter for simplicity
+([https://www.complang.tuwien.ac.at/forth/threaded-code.html - threaded code variants]).
+However, once I found the branch-delay slots making this approach pretty
+wasteful when implementing literals, I switched over to indirect threaded
+interpreter.
+
+Execution-token-address encoding
+--------------------------------
+
+In contrast to the original eForth, I settled on using 16-bit execution-token
+addresses instead of 32-bit cell-sized addresses. This reduced the code
+density of Forth words by almost 50% but required me to adopt PIC-like coding
+patterns and pay close attention to alignment (or1k instructions must be
+32-bit aligned).
+
+Upward-growing stacks
+---------------------
+
+To simplify stack-bounds checking, I let the stacks grow upward
+and start with stack pointer value 0 instead of an actual memory address.
+A stack-element addreess is the sum of three parts:
+
+!   (1)                   (2)                      (3)
+! BSS start  +  stack base offset from BSS  +  stack pointer
+
+The parts (1) and (3) are always held in registers. The part (2) is
+added as an (statically known) immediate offset. For example, here
+is the macro for taking the top-most element from the stack.
+(r13 is the BSS base pointer, r14 the stack position).
+
+! .macro POPD
+!     CHECK_DSTACK_ONE_ITEM
+!     l.add   r8,r13,r14            # BSS base + stack position
+!     l.lwz   r11,_dstack_rel(r8)   # fetch TOS
+!     l.addi  r14,r14,-CELL_BYTES
+! .endm
+
+A little syntax invention of my own
+-----------------------------------
+
+The entire Forth interpreter is implemented in
+[https://github.com/nfeske/genode-allwinner/blob/scp/src/scp/scp.s - one assembler file]
+(except for minor UART-related parts).
+Over time, the ratio between actual assembler code and the definition
+of Forth execution tokens shifted towards the latter. At first, I
+prefixed all execution-token definitions with 'xt_'. But then, after
+a while, I found that almost all symbols carried this prefix. So I turned
+the convention around, giving the Forth execution tokens the privilege
+of using symbol names literally and prefixing assembler code with '_'.
+
+It turns out that the macro mechanism provided by the GNU assembler has
+three features that I could combine to a great effect.
+
+# Macros support varargs.
+# It is possible to iterate over a list of arguments using '.irp',
+  similar to how xargs works on Unix.
+# When calling a macro, commas between arguments are optional.
+
+Leveraging these features, the following macro named '..' can be used
+to create a list of execution-token addresses of arbitrary length.
+Note that the macro nicely converts the supplied address values into 16-bit
+execution-token addresses ('_start' refers to the start of the text segment).
+
+! .macro .. elements:vararg
+! .irp element,\elements
+!     .2byte \element - _start
+! .endr
+! .endm
+
+With this macro, it becomes possible to define execution tokens in
+the assembly file with almost Forth syntax. For example, here is the
+definition of the execution token for "words", which traverses a linked
+list of the dictionary and prints each entry's name. It's almost like
+the GNU assembler was created for writing Forth code.
+
+! LIST_XT words # list dictionary content
+!     .. current at
+! 1:  .. dup qbranch 2f
+!     .. dup dentry_name count space type  # print word
+!     .. at                                # traverse list
+!     .. branch 1b
+! 2:  .. drop exit
+
+Targeting the Pinephone
+-----------------------
+
+Once the interpreter was running happily on the or1ksim simulator, I
+took it to Qemu as a warm-up for targeting the actual Pinephone
+hardware. The transition to Qemu was easy enough, once I figured out where
+to find the virtual UART.
+
+To get to know how to sneak my custom code to the AR100, the Crust firmware
+became handy. I could just follow the instructions for compiling it from
+source, supplying it to the U-Boot, and adding a small debug message to see
+the effect on the Pinephone. Knowing that the SCP firmware loading works in
+principle, all I had to do is mimicking some features of the Crust binary with
+my custom firmware, such as a magic number expected by the ARM Trusted
+Firmware, the load address, and an endianess conversion of the binary. Viola,
+the interpreter showed the first life sign! But it had glitches. It turned out
+that the carry bit is indeed not operational on the AR100. After I implemented
+the carry handling in software, everything started to work perfectly.
+
+Immediate use cases
+-------------------
+
+From the interactive interface, the entirety of the Pinephone hardware
+becomes interactively accessible. For example, the following magic
+spells allow for the printing of a list of hardware registers in
+both hexadecimal and binary format.
+
+! : .0x    48 emit 120 emit ;
+! : .:     58 emit ;
+! : .hex   .0x base @ >r hex <# # # # # # # # # #> type r> base ! ;
+! : #8bit  base @ >r 2 base ! # # # # # # # # r> base ! ;
+! : #.     46 hold ;
+! : .bits  <# #8bit #. #8bit #. #8bit #. #8bit #> type ;
+! : .reg   dup .hex space .: space space @ dup .hex space space .bits ;
+! : .regs  FOR AFT dup .reg cr cell + THEN NEXT drop ;
+
+The '.regs' word takes an address and number as arguments (the arguments
+are written before the command)
+
+! 0> 1c22c00 6 .regs
+
+and produces output like this:
+
+! 0x01c22c00 :  0x00000000  00000000.00000000.00000000.00000000
+! 0x01c22c04 :  0x00000000  00000000.00000000.00000000.00000000
+! 0x01c22c08 :  0x00004020  00000000.00000000.01000000.00100000
+! 0x01c22c0c :  0x00000040  00000000.00000000.00000000.01000000
+! 0x01c22c10 :  0xffffffe0  11111111.11111111.11111111.11100000
+! 0x01c22c14 :  0x000400f5  00000000.00000100.00000000.11110101
+
+It goes without saying that any interesting hardware register
+can be changed at will: Changing the PWM parameters of the backlight, or
+toggling the GPIO pin of the buzzer. This takes me back to the golden
+peek-and-poke days with Atari Basic.
+
+Note that this can be done while the Pinephone happily executes a regular
+operating system, e.g., the Manjaro Linux distribution as shipped on
+the Pinephone.
+
+Designated use cases
+--------------------
+
+The actual goal is the flexible implementation of power-management schemes
+with tight interplay with Genode. E.g., letting the AR100 watch the modem for
+incoming calls and messages, booting Genode only when observing such an
+activity.
+
+Metrics and sentiments
+----------------------
+
+The Forth interpreter and compiler takes about 6 KiB of RAM, which means that
+10 KiB remain available to application-specific code. Given that Forth
+code is more compact than assembly code, this is actually quite a lot of room.
+
+The interpreter and compiler are implemented in an
+[https://github.com/nfeske/genode-allwinner/blob/scp/src/scp/scp.s - assembler file]
+of less than 1000 lines (not counting comments and empty lines). On my
+laptop, the firmware binary can be created from source in 15 milliseconds.
+
+I somehow regret not having discovered earlier the world of wonders of Forth.
+Given that the professional IT world is drowning in complexity, which includes
+the complexity of compilers that everyone takes as inevitable, the simplicity
+and power of Forth is mind bending. It feels like meeting with the computer
+half way. Instead of insisting on universal truths like the '+' having to be
+in the middle, giving a little leeway towards the way a computer can naturally
+operate unlocks a whole lot of advantages.
+
+
+Trying it at home
+#################
+
+I have now added the intermediate result of this line of work to the "scp"
+topic branch of the genode-allwinner repository. Note that it is in flux.
+As the actual firmware logic takes shape, it will likely change here and
+there. Until then, it is already useful as a low-level hardware debugging
+instrument.
+
+:SCP topic branch in the genode-allwinner repository:
+
+  [https://github.com/nfeske/genode-allwinner/commits/scp]
+
+Building
+--------
+
+To build the firmware, the "or1k" flavor of GNU binutils must be installed.
+On Debian, the corresponding package is 'binutils-or1k-elf'. For building this
+flavor of binutils from source, the 'configure' script must be called with the
+argument '--target' 'or1k-elf'.
+
+The 'Makefile' of the _src/scp/_ directory expects the following binutils
+accessible via the 'PATH' variable: or1k-elf-as (assembler), or1k-elf-ld
+(linker), or1k-elf-objcopy (object converter).
+
+Testing on Qemu
+---------------
+
+Qemu officially supports the or1k platform. On Debian, it is available as part
+of the 'qemu-system-misc' package. The binary is named qemu-system-or1k.
+
+With binutils and Qemu for the or1k architecture installed, the kernel of
+the firmware can be built and executed via 'make' 'qemu'. You are dropped
+right into the interactive console of the firmware, which is a minimalistic
+Forth interpreter. E.g., the 'words' command prints the available commands,
+or the sequence '1' '2' '+' '.' prints the number '3'. To exit Qemu, press
+'control-a' followed by 'x'.
+
+Targeting the AR100 SCP
+-----------------------
+
+A firmware binary loadable by the ARM Trusted Firmware and U-Boot can be
+created by issuing 'make' 'scp-ar100.bin'. The path of the resulting binary can
+be supplied as 'SCP' argument when building U-Boot. This will prompt U-Boot -
+in tandem with the ARM Trusted Firmware - to load the SCP binary into the
+appropriate memory location and bootstrap the AR100 processor.
+
+Customization
+-------------
+
+The firmware's textual interface uses the same UART as U-Boot's interactive
+prompt, which naturally causes both drivers to interfere. To avoid trampling
+on each other's toes, the following options may be considered:
+
+* Removing U-Boot's interactive interface by configuring boot commands at
+  build time.
+* Removing the textual input from the SCP firmware.
+* Letting the SCP firmware wait for an external event before going
+  interactive.
+
+The latter two options can easily be accomplished by customizing the 'app.f'
+file with custom Forth code. This code is executed directly on startup. E.g.,
+the example at examples/pinephone/pogopin.f illustrates a crude hack that
+let's SCP spin until two POGO pins of the Pinephone are connected. This way,
+the Pinephone can be used as usual - using any OS - while making the SCP
+command prompt appear when told so by a paperclip.
+
