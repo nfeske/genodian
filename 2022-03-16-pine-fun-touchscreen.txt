@@ -338,5 +338,6 @@ hardware.
 
 [image conflict_fb_touch]
 
-To see the resolution of those conflicts, stay tuned for the next article.
+The resolution of those conflicts is covered by the
+[2022-05-03-pine-fun-trimming-drivers.txt - next article...]
 

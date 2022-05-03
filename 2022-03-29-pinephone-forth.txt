@@ -124,11 +124,11 @@ tirelessly documented his findings around the SCP of the A64 SoC aka AR100.
   [https://linux-sunxi.org/AR100/HardwareSharing]
 
 The AR100 is based on the [https://openrisc.io/ - OpenRISC] instruction-set
-architecture. OpenRISC (or1k) was one of flagship projects of the
+architecture. OpenRISC (or1k) was one of the flagship projects of the
 [https://opencores.org/ - OpenCores] initiative in the early 2000s long before
 open-source IP cores became fashionable.
 It is similar to MIPS or RISC-V. The 32-bit processor has 16 general-purpose
-registers, load-store architecture, and fixed-length instructions. When its
+registers, a load-store architecture, and fixed-length instructions. When its
 ISA was conceived, it was still popular to expose pipeline effects at the ISA
 level via so-called branch-delay slots. The single instruction that follows a
 branch instruction is executed, which can trip up the reading of assembly
