@@ -198,10 +198,13 @@ On the next iteration, the output looks different.
 
 In principle, we could add further kernel infrastructure to expose the driver
 as input/event interface in order to access it from the Linux user land.
-However, the easiest way to see the driver responding to touch input is to
-instrument the driver code directly. In the particular case, the function
-'goodix_process_events' is a suitable hook. Adding a 'printk' as follows does
-the trick.
+One useful tool is the 'evbug' kernel module, which prints each occurring input
+event to the kernel log. It can be activated by enabling the
+kernel-configuration option 'INPUT_EVBUG'.
+Alternatively, an easy way to see the immediate driver responding to touch
+input is to instrument the driver code directly. In the particular case, the
+function 'goodix_process_events' is a suitable hook. Adding a 'printk' as
+follows does the trick.
 
 ! static void goodix_process_events(struct goodix_ts_data *ts)
 ! {
