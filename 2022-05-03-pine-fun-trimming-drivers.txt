@@ -270,10 +270,52 @@ clock, reset, and power controls that are required by the individual driver.
 There may be more than a dozen of such prerequisites. When missing merely one,
 the driver won't work.
 
-Of course, the device tree is always a nice reference to start with. But
-unfortunately it is all too easy to miss one piece of the puzzle. I prefer
-the low-level tracing of register accesses to find the right bits - and also to
-quickly rule out the wrong ones.
+Of course, the device tree is always a nice reference to start with.
+Specifically the 'clocks' and 'reset' properties of the device tree provide
+useful clues. For example, the device node for the 'tcon1' contains the
+following declarations.
+
+! tcon1: lcd-controller@1c0d000 {
+!   ...
+!   clocks = <&ccu 48>, <&ccu 101>;
+!   clock-names = "ahb", "tcon-ch1";
+!   resets = <&ccu 25>;
+!   reset-names = "lcd";
+!   ...
+
+The numbers can be correlated in definitions found at
+_include/dt-bindings/clock/sun50i-a64-ccu.h_ in the Linux source tree.
+
+! ...
+! #define CLK_BUS_TCON1 48
+! ...
+
+Those definitions, in turn, show up in the driver's source tree - in this
+particular case _drivers/clk/sunxi-ng/ccu-sun50i-a64.c_ - which draws the
+connection to the physical coordinates of the clock.
+
+! ...
+! static SUNXI_CCU_GATE(bus_tcon1_clk,  "bus-tcon1",  "ahb1",
+!                       0x064, BIT(4), 0);
+! ...
+! static struct clk_hw_onecell_data sun50i_a64_hw_clks = {
+!   .hws  = {
+!     ...
+!     [CLK_BUS_TCON1]   = &bus_tcon1_clk.common.hw,
+!     ...
+
+Now, a look into the CCU documentation for the 4th bit of the register 0x64
+should close the circle, prompting us to add an appropriately named clock
+definition Genode's platform driver.
+
+I/O register tracing
+--------------------
+
+That said, unfortunately it is all too easy to miss one piece of the puzzle
+when merely looking from _above_ (from the device tree).
+In this case, a look from _below_ may help to complete the picture:
+To find the right bits - and also to quickly rule out the wrong ones -
+the low-level tracing of register accesses is sometimes inevitable.
 
 Usually, Linux subsystems come with their own pieces of infrastructure, which
 provide us with a convenient hook for instrumentation. For example, all
