@@ -397,7 +397,7 @@ The drivers reconciled
 The result of the described development step is best illustrated by the
 [https://github.com/genodelabs/genode-allwinner/blob/master/recipes/raw/drivers_interactive-pinephone/drivers.config - configuration]
 of the drivers subsystem for Genode's interactive system scenarios on the
-Pinephone.
+PinePhone.
 It clearly documents the _enforced_ relationship between the drivers and the
 related hardware at an almost intuitive level of abstraction. For example, it
 becomes perfectly clear, which driver has the authority over which GPIO pin.

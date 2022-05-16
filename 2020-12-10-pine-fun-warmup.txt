@@ -3,7 +3,7 @@
                         Warming up for some Pine fun
 
 
-I recently got my hands on a Pinephone along with a Pine64 board and have the
+I recently got my hands on a PinePhone along with a Pine64 board and have the
 aspiration to bring Sculpt OS to this platform. This is a very welcome
 opportunity to document the process of such a porting effort.
 
@@ -35,7 +35,7 @@ Why Pine64?
 
 I got excited about Pine64 for several reasons.
 
-First, devices in the form factors of the Pinephone and the A64 development
+First, devices in the form factors of the PinePhone and the A64 development
 boards are readily available at affordable prices. The Pine64 website carries
 a very positive message, highlighting community, openness, sustainability,
 transparency, no marketing nonsense.
@@ -43,7 +43,7 @@ transparency, no marketing nonsense.
 Second, the products are designed for hackability. This is evidenced by the
 vibrant developer community, mainline Linux kernel support, and the
 availability of literally more than a dozen Linux distributions. One can boot
-the Pinephone directly from SD-card. How cool is that!
+the PinePhone directly from SD-card. How cool is that!
 
 Third, the used Allwinner SoC - introduced as early as 2015 - is rather aged.
 In contrast to bleeding-edge hardware, I would not need to explore unconquered
@@ -65,9 +65,9 @@ Getting a first impression
 
 We ordered a
 [https://pine64.com/product-category/pinephone/ - Pine64-LTS] board, a
-[https://pine64.com/product-category/pinephone/ - Pinephone], and a
+[https://pine64.com/product-category/pinephone/ - PinePhone], and a
 [https://pine64.com/product/pinebook-pinephone-pinetab-serial-console/ - serial cable]
-for the Pinephone directly from the online store. For some kind
+for the PinePhone directly from the online store. For some kind
 of safety reason, the phone had to be ordered separately. In hindsight, we
 better had ordered a power supply for the Pine64-LTS board as well. We skipped
 it as we already have kilograms of AC power supplies of other boards at hand.
@@ -75,7 +75,7 @@ However, it turned out that kilograms of power supplies with 5mm connectors
 are of little use when the board features a less mainstream 3.5mm connector.
 Such details matter sometimes.
 
-Dabbling with the *Pinephone* was pure joy. I particular loved exploring the
+Dabbling with the *PinePhone* was pure joy. I particular loved exploring the
 work of [https://xnux.eu/log/ - Ondrej Jirman] such as his
 [https://xnux.eu/p-boot/ - p-boot] boot loader and his ready-to-use
 [https://xnux.eu/p-boot-demo/ - multi-distro] image that features no
@@ -87,7 +87,7 @@ GNU/Linux developments. Personally, I found
 [https://ubuntu-touch.io/ - Ubuntu touch] particularly interesting to explore.
 
 For getting my hands dirty with technical work, I'll have to leave the
-Pinephone alone for a while and turn my attention to the *Pine-A64-LTS* board.
+PinePhone alone for a while and turn my attention to the *Pine-A64-LTS* board.
 The [https://wiki.pine64.org/index.php/PINE_A64-LTS/SOPine_Main_Page - Pine64 wiki]
 provides the perfect staring point.
 
@@ -351,7 +351,7 @@ For reference, here are the steps I took.
   ! configs/pine_h64_defconfig
 
   Well, _pine64-lts_defconfig_ sounds like I'm lucky for the Pine64 board.
-  But the Pinephone is notably absent.
+  But the PinePhone is notably absent.
   A look at [https://linux-sunxi.org/PinePhone] clarifies the situation:
   "As we currently do not have any specific U-Boot config for this device, Use
   the pine64-lts_defconfig build target temporarily as a hack." That's fine

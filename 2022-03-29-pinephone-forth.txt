@@ -1,10 +1,10 @@
 
 
-                    Darling, I FORTHified my Pinephone!
+                    Darling, I FORTHified my PinePhone!
 
 
 This is my experience story behind Genode's forthcoming custom firmware for
-the Pinephone's AR100 system-control processor (SCP). It makes a case for using
+the PinePhone's AR100 system-control processor (SCP). It makes a case for using
 Forth for implementing SCP functionality and describes the process of bringing
 Forth to the OpenRISC instruction-set architecture.
 
@@ -79,12 +79,12 @@ my main dedication to Genode, which makes me deeply entrenched with C++.
 So I did not try too hard to draw any connection between Forth and Genode.
 
 
-The Pinephone's system-control processor
+The PinePhone's system-control processor
 ########################################
 
 As documented by my [https://genodians.org/nfeske/index - Pine fun] article
 series, I'm pursuing the vision of a Genode-based smart phone with the
-Pinephone being the hardware platform of choice. When speaking of mobile
+PinePhone being the hardware platform of choice. When speaking of mobile
 phones, one of the most central topics is battery time, which
 ultimately led my attention to the so-called system-control processor (SCP).
 In modern ARM SoCs, the actual application processor has a little sidekick
@@ -110,7 +110,7 @@ of the SoC. It can control all peripherals including the modem, and
 access the entirety of physical memory.
 From a security and privacy perspective, the usual practice of operating an
 SCP with proprietary firmware in consumer devices is highly suspect.
-Fortunately, the Pinephone community has long shun the proprietary blobs. It
+Fortunately, the PinePhone community has long shun the proprietary blobs. It
 has been replaced by the so-called [https://github.com/crust-firmware/crust - Crust]
 firmware. Besides creating the firmware, developer Samuel Holland
 tirelessly documented his findings around the SCP of the A64 SoC aka AR100.
@@ -138,7 +138,7 @@ as the support for the carry bit missing.
 
 Even though OpenRISC is not a household name, it is officially supported by
 GNU binutils and GCC, and Qemu can handle it out of the box. The loading of
-SCP firmware on the Pinephone is routinely done by U-Boot in concert with the
+SCP firmware on the PinePhone is routinely done by U-Boot in concert with the
 ARM Trusted Firmware.
 
 Speaking of loading the SCP firmware, there is one interesting constraint: In
@@ -154,7 +154,7 @@ documentation goes into details).
 With that little memory, the fixed-function feature set of the Crust firmware
 is rather constrained, which is perfectly fine for augmenting a Linux
 system with suspend-resume functionality. But for running Genode on the
-Pinephone, I'd like to move more freely, e.g., letting the SCP interact
+PinePhone, I'd like to move more freely, e.g., letting the SCP interact
 with the modem while the application processor is powered off.
 
 I wondered, could Forth and the AR100 be a good match?
@@ -275,18 +275,18 @@ the GNU assembler was created for writing Forth code.
 !     .. branch 1b
 ! 2:  .. drop exit
 
-Targeting the Pinephone
+Targeting the PinePhone
 -----------------------
 
 Once the interpreter was running happily on the or1ksim simulator, I
-took it to Qemu as a warm-up for targeting the actual Pinephone
+took it to Qemu as a warm-up for targeting the actual PinePhone
 hardware. The transition to Qemu was easy enough, once I figured out where
 to find the virtual UART.
 
 To get to know how to sneak my custom code to the AR100, the Crust firmware
 became handy. I could just follow the instructions for compiling it from
 source, supplying it to the U-Boot, and adding a small debug message to see
-the effect on the Pinephone. Knowing that the SCP firmware loading works in
+the effect on the PinePhone. Knowing that the SCP firmware loading works in
 principle, all I had to do is mimicking some features of the Crust binary with
 my custom firmware, such as a magic number expected by the ARM Trusted
 Firmware, the load address, and an endianess conversion of the binary. Viola,
@@ -297,7 +297,7 @@ the carry handling in software, everything started to work perfectly.
 Immediate use cases
 -------------------
 
-From the interactive interface, the entirety of the Pinephone hardware
+From the interactive interface, the entirety of the PinePhone hardware
 becomes interactively accessible. For example, the following magic
 spells allow for the printing of a list of hardware registers in
 both hexadecimal and binary format.
@@ -330,9 +330,9 @@ can be changed at will: Changing the PWM parameters of the backlight, or
 toggling the GPIO pin of the buzzer. This takes me back to the golden
 peek-and-poke days with Atari Basic.
 
-Note that this can be done while the Pinephone happily executes a regular
+Note that this can be done while the PinePhone happily executes a regular
 operating system, e.g., the Manjaro Linux distribution as shipped on
-the Pinephone.
+the PinePhone.
 
 Designated use cases
 --------------------
@@ -426,7 +426,7 @@ on each other's toes, the following options may be considered:
 The latter two options can easily be accomplished by customizing the 'app.f'
 file with custom Forth code. This code is executed directly on startup. E.g.,
 the example at examples/pinephone/pogopin.f illustrates a crude hack that
-let's SCP spin until two POGO pins of the Pinephone are connected. This way,
-the Pinephone can be used as usual - using any OS - while making the SCP
+let's SCP spin until two POGO pins of the PinePhone are connected. This way,
+the PinePhone can be used as usual - using any OS - while making the SCP
 command prompt appear when told so by a paperclip.
 

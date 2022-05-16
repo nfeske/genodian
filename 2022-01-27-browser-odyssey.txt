@@ -25,7 +25,7 @@ by HTML5-based web applications, which are universally accepted by end
 users by now. By combining a modern web engine with Genode, we aim at
 making this wide variety of modern-day applications readily available on
 Genode. We are particularly interested in using those applications under
-Genode on the Pinephone.
+Genode on the PinePhone.
 
 However, this is anything but an easy feat because web engines are not only
 among the most complex software stacks, but also moving targets. We
@@ -479,7 +479,7 @@ Although we are happy to see the media features working in principle,
 we are not there yet, evidenced by audible distortions and latencies.
 Given the heavy work load and complexity of the browser,
 this is not surprising. To follow our ambition to host WebRTC-based video-chat
-scenarios on the resource-constrained Pinephone, however, we need to
+scenarios on the resource-constrained PinePhone, however, we need to
 deeply understand and optimize those non-functional aspects.
 That's our motivation behind emphasizing quality-of-service topics on Genode's
 recently published [https://genode.org/about/road-map - road map for 2022].

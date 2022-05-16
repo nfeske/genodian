@@ -3,12 +3,12 @@
                          Pine fun - Touchscreen
 
 
-On our mission to enable the Pinephone hardware for Genode piece by piece,
+On our mission to enable the PinePhone hardware for Genode piece by piece,
 let's turn our attention to the touchscreen device, which is the gateway to
 interactive system scenarios.
 
 In the [http:2021-12-21-pine-fun-display - previous article], we went
-though the steps of transplanting the Pinephone's highly complex display
+though the steps of transplanting the PinePhone's highly complex display
 driver from the Linux kernel into a Genode driver component. Given the lessons
 learned, porting over the touch screen driver should be a walk in the park,
 shouldn't it? Let's see.
@@ -23,11 +23,11 @@ transplant the relevant code into our custom Genode component as a second
 step. The challenge of the first step is finding the right knobs in the
 Linux kernel configuration to make the driver and device come alive.
 
-Analogously to the network and display drivers covered earlier, our trailhead
+Analogously to the network and display drivers covered earlier, our trail head
 is the
 [http:2021-09-03-pine-fun-networking#Identifying_Linux_source_codes_of_interest - device tree]
 shipped with the vendor Linux kernel. By searching for "touch" in the device
-tree for the Pinephone, the following device node presents itself:
+tree for the PinePhone, the following device node presents itself:
 
 ! touchscreen@5d {
 !  compatible = "goodix,gt917s";
@@ -88,7 +88,7 @@ are designated for always-on functionality.
 The "rsb" (reduced serial bus) is the two-wire bus that interconnects the SoC
 with the power-management IC "x-powers,axp803".
 The "i2c" and "pinctrl" relation becomes apparent when looking at the
-schematics of the Pinephone or the datasheet of the Goodix touchscreen
+schematics of the PinePhone or the datasheet of the Goodix touchscreen
 controller.
 
 [image pinephone_touch_schematics]
@@ -176,7 +176,7 @@ of "CONFIG_I2C_MV64XXX". So we add this one to our kernel configuration.
 ! LX_ENABLE += I2C_MV64XXX
 
 After a few iterations of enabling kernel options, building the kernel,
-and test-driving it on the Pinephone, we are greeted by the driver:
+and test-driving it on the PinePhone, we are greeted by the driver:
 
 ! Goodix-TS 0-005d: ID 917S, version: 0200
 ! Goodix-TS 0-005d: Failed to invoke firmware loader: -22
@@ -282,7 +282,7 @@ reset to obtain one bit of configuration information (choice between two
 possible I2C addresses).
 
 To accommodate the time multiplexed use of a pin as input or output, Genode's
-pin driver (a64_pio for the Pinephone) switches an output pin to output mode
+pin driver (a64_pio for the PinePhone) switches an output pin to output mode
 not before a pin-control client actually accesses the pin. This way, a driver
 is able to toggle the direction by controlling the lifetime of its pin-control
 session while sensing the pin via a separate pin-state session.

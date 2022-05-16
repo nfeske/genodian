@@ -1,12 +1,12 @@
 
 
-                 Pine fun - Booting Genode on the Pinephone
+                 Pine fun - Booting Genode on the PinePhone
 
 
 Until now, my exploration of the Allwinner A64 SoC was mainly concerned with
 the Pine-A64-LTS board, which offers developer conveniences like booting over
 the network, or easily accessible reset and GPIO pins. Now, it's time to
-switch gears by moving the development workflow over to the Pinephone.
+switch gears by moving the development workflow over to the PinePhone.
 
 In the [https://genodians.org/nfeske/2021-09-03-pine-fun-networking - previous episode],
 we picked networking as a suitable topic to cover the principle steps needed
@@ -15,16 +15,16 @@ Genode.
 However, our vision of a Genode-based mobile phone requires drivers for
 device hardware that is not present on the Pine-A64-LTS board. I'm speaking
 of the display, touch screen, and modem, among many other peripherals.
-So the time is overdue to switch the development to the Pinephone hardware.
+So the time is overdue to switch the development to the PinePhone hardware.
 
 
 Booting from SD-card
 --------------------
 
-Unlike regular smartphones, the Pinephone is able to boot directly from
+Unlike regular smartphones, the PinePhone is able to boot directly from
 an SD card, which is the preferred way for trying out the various Linux-based
 operating systems that exist for the phone. Both the Pine-A64-LTS board as
-well as the Pinephone are supported by the official U-Boot boot loader.
+well as the PinePhone are supported by the official U-Boot boot loader.
 We already went though the process of manually building and installing
 U-Boot in an
 [https://genodians.org/nfeske/2020-12-10-pine-fun-warmup#The_U-Boot_boot_loader - earlier article].
@@ -105,13 +105,13 @@ image that can be written to an SD-card using the 'dd' command. For example:
 _Of course '/dev/sdx' must be adjusted to the device of the SD-card._
 
 
-Using fastboot with the Pinephone
+Using fastboot with the PinePhone
 ---------------------------------
 
 A development workflow based on juggling SD-cards is hardly satisfying. It is
 also prone to wearing out the hardware. Since network boot is out of question
 due to the lack of a network connector on the phone, we long for an
-alternative way to load custom system images to the Pinephone.
+alternative way to load custom system images to the PinePhone.
 Here, the so-called 'fastboot' mechanism enters the picture. If enabled in
 U-Boot, the boot loader enters a fastboot mode that uses the USB OTG connector
 for receiving a stream of bytes before issuing a boot command.
@@ -150,7 +150,7 @@ SD-card image has everything needed for using this mechanism.
 
   ! saveenv
 
-Upon the next boot, the Pinephone automatically enters the fastboot mode,
+Upon the next boot, the PinePhone automatically enters the fastboot mode,
 waiting for the transfer of an image file over USB. At this point, the boot
 log happens to show the message "musb-hdrc: peripheral reset irq lost!".
 
@@ -172,7 +172,7 @@ At the host side, the following steps must be taken.
 
 # When developing inside a Linux VM in top of Sculpt OS, it is useful to
   add the following lines to _/config/usb_ to ease the assignment of
-  the Pinephone's UART and fastboot devices to the virtual machine.
+  the PinePhone's UART and fastboot devices to the virtual machine.
 
   !<usb>
   !  ...
@@ -190,19 +190,19 @@ At the host side, the following steps must be taken.
   !  <device label="fastboot"/>
   !</inline>
 
-  Note that each reboot of the Pinephone results in a different 'fastboot' USB
+  Note that each reboot of the PinePhone results in a different 'fastboot' USB
   device each time. In the current version of Sculpt, one needs to manually
   trigger the re-request of the "fastboot" USB session by removing and
   subsequently adding the corresponding '<device>' node manually.
 
 With these steps taken, Genode scenarios can be sent directly to the
-Pinephone using fastboot. Executing the framebuffer test has become as
+PinePhone using fastboot. Executing the framebuffer test has become as
 simple as
 
 ! build/arm_v8a$ make run/framebuffer_pinephone KERNEL=hw BOARD=pinephone
 
-After rebooting the Pinephone and executing the command above, we are greeted
-with colorful patterns on the Pinephone's display and various messages of
+After rebooting the PinePhone and executing the command above, we are greeted
+with colorful patterns on the PinePhone's display and various messages of
 the framebuffer driver in Genode's log output.
 
 !Starting download of 1488896 bytes
@@ -243,7 +243,7 @@ _It is highly recommended to use the 'mkimage' that comes along with our_
 _custom-built U-Boot to avoid subtle inconsistencies between the U-Boot_
 _version on the device and the tools installed on the host system._
 
-The resulting _lx.itb_ FIT image can be loaded to the Pinephone as soon as
+The resulting _lx.itb_ FIT image can be loaded to the PinePhone as soon as
 U-Boot has entered the fastboot mode.
 
 ! build/arm_v8a$ fastboot boot lx.itb
@@ -256,7 +256,7 @@ early kernel output and debug messages.
 ! saveenv
 
 _Thanks to Ivan Loskutov for the fantastic hints of how to get fastboot to_
-_work with the Pinephone!_
+_work with the PinePhone!_
 _Thanks to Christian Helmuth and Johannes Schlatow for their assistance with_
 _figuring out how to fastboot FIT images!_
 
