@@ -102,7 +102,7 @@ handler for the error code. For example, with 'ram' being a reference to a
 !     }
 !   });
 
-Which of both lamba functions gets called depends on the success of the
+Which of both lambda functions gets called depends on the success of the
 'try_alloc' call. The value returned by 'try_alloc' is only reachable by the
 code in the scope of the first lambda function. The code within this scope can
 rely on the validity of the argument.
@@ -116,7 +116,7 @@ over 'catch' handlers, the use of 'switch' allows us to share error handing
 code for different conditions by grouping 'case' statements.
 
 Note that in the example above, the valid 'ds' object cannot leave the
-scope of its lamba function. Sometimes, however, we need to pass a return
+scope of its lambda function. Sometimes, however, we need to pass a return
 value along a chain of callers. This situation is covered by the
 'Attempt::convert' method. Analogously to 'with_result', it takes two
 lambda functions as arguments. But in contrast to 'with_result', both lambda
