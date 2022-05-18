@@ -473,7 +473,7 @@ scenario.
 !       <resource name="RAM" quantum="1M"/>
 !       <provides> <service name="Platform"/> </provides>
 !       <route> <any-service> <parent/> </any-service> </route>
-!       <config>
+!       <config devices_rom="config">
 !         <policy label="emac_nic_drv -> ">
 !         </policy>
 !       </config>

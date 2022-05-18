@@ -104,7 +104,7 @@ to the run script, appropriately named _a64_pio_drv.run_.
   !   <resource name="RAM" quantum="1M"/>
   !   <provides> <service name="Platform"/> </provides>
   !   <route> <any-service> <parent/> </any-service> </route>
-  !   <config>
+  !   <config devices_rom="config">
   !     <device name="pio">
   !       <io_mem address="0x1c20800" size="0x400"/>
   !       <irq number="43"/>
@@ -122,10 +122,15 @@ to the run script, appropriately named _a64_pio_drv.run_.
   The <provides> declaration states that this component offers a "Platform"
   service.
 
-  The <config> node tells the platform driver about the known device
-  resources. We declare the existence of a single "pio" device that
-  features one memory-mapped I/O range and the GIC interrupt 43.
-  You may recall those values from the
+  The <config> node tells the platform driver to determine the information
+  about the present devices from the ROM module labeled "config", which allows
+  us to specify both the device information and the policy inside the same
+  <config> node.
+  Without the 'devices_rom="config"' attribute, the platform driver would
+  request a "devices" ROM session instead.
+  We declare the existence of a single "pio" device that features one
+  memory-mapped I/O range and the GIC interrupt 43. You may recall those
+  values from the
   [https:2021-03-17-pine-fun-device-access - previous article].
 
   The <config> node also tells the platform driver about the access-control
