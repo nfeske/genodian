@@ -89,7 +89,7 @@ GNU/Linux developments. Personally, I found
 For getting my hands dirty with technical work, I'll have to leave the
 PinePhone alone for a while and turn my attention to the *Pine-A64-LTS* board.
 The [https://wiki.pine64.org/index.php/PINE_A64-LTS/SOPine_Main_Page - Pine64 wiki]
-provides the perfect staring point.
+provides the perfect starting point.
 
 
 Booting an officially supported GNU/Linux image

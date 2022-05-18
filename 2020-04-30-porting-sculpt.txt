@@ -179,12 +179,12 @@ is accompanied with a rough estimation.
   the driver often does not only drive one device but multiple (such as
   power-gating via additional I2C-connected controllers, or a dedicated HDMI
   chip). As an indicator for the expected effort, the i.MX framebuffer driver
-  took us *two months* to bring to live.
+  took us *two months* to bring to life.
 
 # USB host-controller driver
 
   Genode's USB host-controller driver is based on the Linux USB driver.
-  Adding supplemental support for new SoC should generally possible within
+  Adding supplemental support for a new SoC should generally possible within
   *one month*. With the USB host-controller driver in place, the actual USB
   device drivers (e.g., for HID and storage) should work out of the box.
 

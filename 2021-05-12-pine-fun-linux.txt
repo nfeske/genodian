@@ -403,7 +403,7 @@ Device-tree treasure trove
 The so-called device trees
 ([https://github.com/devicetree-org/devicetree-specification/releases/download/v0.3/devicetree-specification-v0.3.pdf - PDF])
 are semi-formal descriptions of a hardware platforms, which may consist of
-several peripherals, busses, interrupt controllers, clocks, and so on.
+several peripherals, buses, interrupt controllers, clocks, and so on.
 In the context of Linux, it serves two purposes. First, it fills the gap of
 dynamic device discovery on platforms where devices cannot
 be probed in a reliable way at runtime. This applies for most ARM SoCs.

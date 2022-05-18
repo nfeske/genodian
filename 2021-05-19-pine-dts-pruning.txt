@@ -21,8 +21,7 @@ the system is natural. In contrast, Genode fosters a strict separation of
 drivers from each other where each driver gets to see only a tiny part of the
 picture. With a DTS file of more than 1600 lines (as for the Pine-A64-LTS)
 board given, it is really hard to see to see clear lines of responsibilities
-between drivers. This is where the new
-[https://github.com/nfeske/genode/commits/dts - tool set]
+between drivers. This is where Genode's tool at _tool/dts/extract_
 comes into play. Just for reference, usage information are provided by
 executing the tool without arguments.
 

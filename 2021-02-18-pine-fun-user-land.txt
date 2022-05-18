@@ -145,16 +145,15 @@ addresses, the failure is no longer a mystery at all.
 Let's revisit the corners that we cut while mirroring the i.MX8 EVK board
 support:
 
-* We kept the definitions for memory-mapped I/O regions for
-  IRQ_CONTROLLER_CPU_BASE and IRQ_CONTROLLER_DISTR_BASE untouched, knowing
+* We kept the definitions for memory-mapped I/O regions for the IRQ
+  controller's CPU_BASE and DISTR_BASE untouched, knowing
   that the values most certainly mismatch with the Allwinner SoC.
 
 * We pruned the 'core_mmio' regions to cover only the UART. So even
   if core had the right numbers, it could not access the underlying
   hardware registers.
 
-* We set NR_OF_CPUS to 4 but left the implementation of
-  'Board::Cpu::wake_up_all_cpus' empty.
+* We set NR_OF_CPUS to 4 but left 'Board::Cpu::wake_up_all_cpus' empty.
 
 There are quite a few uncertainties. A good way to reduce them is to
 first take the multi-core-related issues from the table. From experience,

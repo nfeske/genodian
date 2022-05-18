@@ -37,7 +37,8 @@ default. We have already seen it in action when we interacted with U-Boot and
 the Armbian system over the serial connection. Just for reference, here is
 the corresponding 'dmesg' output again:
 
-! [    2.250163] 1c28000.serial: ttyS0 at MMIO 0x1c28000 (irq = 31, base_baud = 1500000) is a 16550A
+! [    2.250163] 1c28000.serial: ttyS0 at MMIO 0x1c28000
+!                (irq = 31, base_baud = 1500000) is a 16550A
 
 There are several ways to find out more about this particular device.
 For example, one might be inclined to consult chip-vendor documentation. This,

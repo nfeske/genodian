@@ -113,7 +113,7 @@ above. You may consider the following points:
   connectivity, and possibly JTAG.
 
 * Availability and quality of technical documentation. Even for many
-  SoCs popular in the Linux community - think of the Raspberry Pi or Allwinner
+  SoCs popular in the Linux community - think of the Raspberry Pi
   devices - public documentation is sparse or of questionable quality.
   If you find a "reference manual" of only a few hundred pages online,
   possibly imprinted with the term "CONFIDENTIAL", it's probably better to

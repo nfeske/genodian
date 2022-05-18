@@ -17,7 +17,6 @@ we were greeted with the first life sign of the kernel:
 
 This raises the questions: What is the trouble about? How did we get there?
 What went wrong?
-
 Thankfully, the message gives us a concrete reference to the code _cpu.cc_ at
 line 205.
 
@@ -84,7 +83,7 @@ of matches to a useful level.
 ! src/core/kernel/cpu.h:        Cpu & executing_cpu() { return cpu(Cpu::executing_id()); }
 ! src/core/kernel/cpu.h:            for (unsigned i = 0; i < _count; i++) func(cpu(i));
 ! src/core/kernel/cpu.cc:Cpu & Cpu_pool::cpu(unsigned const id)
-! src/core/kernel/cpu_up.cc:Kernel::Cpu::Ipi::Ipi(Kernel::Cpu & cpu) : Irq(~0U, cpu), cpu(cpu) { }
+! src/core/kernel/cpu_up.cc:Kernel::Cpu::Ipi::Ipi(Kernel::Cpu & cpu) : ...
 ! src/core/kernel/cpu_context.h:        void cpu(Cpu &cpu) { _cpu = &cpu; }
 ! src/core/kernel/thread.cc:    Cpu & cpu = cpu_pool().cpu(user_arg_2());
 

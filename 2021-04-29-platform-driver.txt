@@ -57,7 +57,8 @@ We have to find a suitable name and location within our source tree for our
 designated driver component.
 
 The naming of driver components within Genode follows the pattern
-'<device-or-platform>_<driver-type>_drv'. For example, the 'imx8_fb_drv' is a
+! <device-or-platform>_<driver-type>_drv
+For example, the 'imx8_fb_drv' is a
 framebuffer (fb) driver for the 'i.MX8' SoC. In our case of a PIO driver for
 the Allwinner A64 SoC, the name 'a64_pio_drv' is a sensible choice.
 
@@ -129,9 +130,9 @@ to the run script, appropriately named _a64_pio_drv.run_.
   Without the 'devices_rom="config"' attribute, the platform driver would
   request a "devices" ROM session instead.
   We declare the existence of a single "pio" device that features one
-  memory-mapped I/O range and the GIC interrupt 43. You may recall those
-  values from the
-  [https:2021-03-17-pine-fun-device-access - previous article].
+  memory-mapped I/O range and the GIC interrupt 43.
+  You may recall those values from
+  the [https:2021-03-17-pine-fun-device-access - previous article].
 
   The <config> node also tells the platform driver about the access-control
   policy applied to clients that connect to the platform service.
@@ -225,7 +226,7 @@ the platform driver. The following snippet highlights the important changes.
 * A session to the platform service is established by creating an instance of
   a 'Platform::Connection' passing the Genode environment as argument.
   ! Platform::Connection _platform { _env };
-  By passing the environment, we explicitly give our consent that
+  By passing the '_env', we explicitly give our consent that
   the 'Platform::Connection' can have global side effects such as the
   communication with the outside world.
 
@@ -297,22 +298,6 @@ roles are:
   operating a pin as an interrupt source. This role can be represented by
   Genode's existing IRQ session interface - the same interface as provided
   by Genode's core for GIC interrupts.
-
-_In principle, there may exist legitimate use cases for controlling the_
-_direction on an I/O pin by a client, e.g., for implementing a bit-banging_
-_driver for a single-wire-bus. However, in practice, we haven't observed_
-_such use cases with modern SoC's. Should such a tristate use case pop up,_
-_we may address it by dedicated session type._
-
-At the time of writing, the "Pin_state" and "Pin_control" session interfaces
-still reside
-[https://github.com/genodelabs/genode-allwinner/tree/master/include - local]
-to the genode-allwinner repository.
-The corresponding commit comprising the interfaces along with SoC-agnostic
-utilities to implement them is
-[https://github.com/genodelabs/genode-allwinner/commit/90bdedfff9894a300fdd1a6c508e48d588aa11a0 - here].
-After a period of time-testing, they will eventually become part of the Genode
-API, replacing the traditional "Gpio" session interface.
 
 
 PIO device driver
