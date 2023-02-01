@@ -1,0 +1,267 @@
+
+
+                 First system image of mobile Sculpt OS
+
+
+At FOSDEM 2023, I'm going to introduce the mobile version of Sculpt OS at the
+"FOSS on mobile" developer room - the perfect opportunity to kick off a
+first public field test.
+
+My presentation will be on Saturday, February 4, at 13:40 in the room
+UB4.136:
+
+:Can Genode on the PinePhone question the notion of a smartphone?:
+
+  [https://fosdem.org/2023/schedule/event/genode_on_the_pinephone/]
+
+Besides introducing the project, I plan to give a live demonstration.
+Linked below you can find the system image as used for the demo.
+
+
+Hardware requirements and target audience
+-----------------------------------------
+
+* PinePhone version 1.2
+* 3 GiB RAM
+* SIM card
+
+The image is not expected to work on earlier versions of the PinePhone.
+
+Please note that the provided system is targeted at enthusiasts and
+developers of the Genode community, not at regular end users.
+Use it at your own risk.
+
+
+Functionality covered
+---------------------
+
+* Custom
+  [https://genodians.org/nfeske/2023-01-05-mobile-user-interface - user interface]
+* Voice calls and mobile-data connectivity
+* On-target software installation and system update
+* Device controls (battery, brightness, volume, mic, reset, shutdown)
+* Installable software
+  * Chromium-based Morph web browser
+  * OpenGL test program using the GPU (glmark2)
+  * Camera test, audio oscilloscope
+  * Light-weight Unix-like system shell
+
+
+Installation
+------------
+
+# Download the SD-card image from here:
+
+  [https://depot.genode.org/nfeske/image]
+
+  You can find the disk image in two forms, as compressed .img.xz file
+  or contained in a .zip file.
+
+  You may check the downloaded image's integrity with GnuPG using the
+  accompanied .sig files and my
+  [https://github.com/genodelabs/genode/tree/master/repos/gems/sculpt/depot/nfeske - public key].
+
+# Copy the image to an SD-card
+
+  On Unix-like systems, uncompress the downloaded .img.xz file and copy the
+  resulting .img file to an SD-card.
+
+  ! $ xz -d sculpt-pinephone-<version>.img.xz
+  ! $ sudo dd if=sculpt-pinephone-<version>.img of=/dev/sdX bs=1M conv=fsync
+
+  _Replace '/dev/sdX' by the name of your_
+  _SD-card device. You may check 'dmesg' for obtaining the device name._
+
+# Boot the PinePhone with the SD-card inserted.
+  After around 5 seconds, the user interface should appear.
+
+# Extend the Genode partition to the full size of the SD card.
+  The downloaded image contains a tiny partition merely capable to the hold the
+  base system. We need to expand it to the SD-card's actual capacity to have
+  room for applications and data.
+
+  * Select the "Storage" section
+  * Select the partition "1"
+  * Select "Expand" and confirm the operation
+  * After a up to 20 seconds, you should see the partition size changed to the
+    SD-card's capacity
+
+# Make the expanded partition the default using the "Default" button.
+
+The concepts mirror the PC version of Sculpt OS. Please refer to the Sculpt OS
+[https://genode.org/documentation/articles/sculpt-22-10 - documentation]
+for more details.
+
+
+Quick start
+-----------
+
+# *Toggle* between the base system and the user-defined runtime at
+  any time by touching the *left screen edge*.
+
+# Enable the modem in the "Phone" section of the GUI.
+
+# Once the modem is powered up, the SIM PIN is requested.
+
+# Once the phone is "ready", enable mobile-data connectivity in the
+  "Network" section. While connecting, the status in the network
+  section title displays "mobile ...". Once connected, the three little
+  dots disappear and the device-local IP address of the modem is displayed
+  below the buttons.
+
+# To test-drive the installation of software, select the "nano3d" preset in the
+  "Software" section. This will trigger the installation of the components
+  required by this preset, as reflected by the "install ..." message
+  in the section title. You can get more details about the progress
+  in the "Status" tab. Once the installation is complete, touch the
+  left screen border to toggle between the just installed scenario and
+  the base system.
+
+  Yes, you can control the spinning thing with your finger.
+
+# Try out the other presets.
+
+
+Presets
+-------
+
+:camera test:
+
+  Shows the camera image, switching between the front and rear cameras
+  every 10 seconds.
+
+:empty:
+
+  Resets the runtime to the initial state with no components present.
+
+:gpu test:
+
+  GLMark2 OpenGL demo using the GPU.
+
+:morph browser:
+
+  Web browser based on the Chromium engine and Qt5. It is hugely complex.
+  Hence your patience is needed while downloading and extracting it.
+  You may switch to the status tab to watch the progress.
+
+  Upon startup, the browser loads a simple landing page from genode.org
+  with several links to the world-wide web.
+
+  The browser is configured such that no state is stored persistently
+  by using the ram fs as location for the browser cache, cookies, and
+  downloads. You can wipe this information using "Reset" button of the
+  ram-fs component in the runtime graph.
+
+:nano3d:
+
+  A simple software-rendering demo.
+
+:osci:
+
+  An oscilloscope for the microphone input. You need to enable the
+  microphone in the "Device" section to see anything interesting.
+
+:system shell:
+
+  A Unix-like command interface allowing you to access the inner life
+  of Sculpt's config and report file systems using coreutils and ViM.
+  You can find the Sculpt partition mounted at _/rw/_.
+
+
+Feedback
+--------
+
+Please leave your feedback on the
+[https://genode.org/community/mailing-lists - Genode mailing list].
+
+
+Commentary and caveats
+----------------------
+
+* When entering a wrong SIM PIN too often, the SIM card will request a PUK.
+  *PUK handing is not covered* bu the user interface. To reset the SIM PIN,
+  you will need to boot your favorite Linux variant for the PinePhone.
+
+* The *battery percentage* value is *not* always *reliable*. It is the plain
+  information received from the power-management chip without any sanitizing.
+  Take it lightly.
+
+* The *power-meter* information is updated every *10 seconds*. To see the
+  effect of a change like modifying the brightness, wait a bit.
+
+* The system-shell preset corresponds to the system shell in Sculpt OS.
+  You can find the selected Sculpt partition mounted at _/rw/_,
+  the config file system mounted at _/config/_ and the report file system
+  mounted at _/report/_.
+
+  You can use vim to inspect the *system log* at _/report/log_.
+
+* The report-dump option captures the entire state of the
+  report file system (including the system log) at a regular interval
+  of one minutes to the SD-card. This allows you to inspect this
+  *diagnostic information offline* by browsing the SD-card on a regular PC.
+
+* To take *screen shots*, enable the screenshot option in the software section.
+  While enabled, a red dot is presented at the upper left screen corner,
+  which can be touched to capture the current screen into a .png file.
+  The .png files are named after a pseudo date and stored at the root of
+  the Genode partition. As of now, they can be retrieved only by accessing the
+  SD-card offline.
+
+* Resource-heavy websites can bring down the morph browser. You can restart
+  it by using the "Restart" button in the gpu drv component. Since the
+  browser depends on the GPU driver, it will implicitly be restarted along
+  with the GPU driver.
+
+* The "Storage" section of the user interface looks out of place.
+  This is because it was taken as is from the PC version of Sculpt OS,
+  which was not designed for touch devices. In upcoming revisions,
+  this section will become touch friendlier and will offer a file browser.
+
+* The "History" and "Contacts" tabs in the phone section are mere mock ups
+  to illustrate where we are going. The features are not provided yet.
+
+* Some usability deficiencies like the missing ability to toggle the
+  touch-screen keyboard in the morph-browser preset or the lack of proper
+  symbols on the touch-screen keyboard are quite obvious.
+  These surface-level usability aspects will be improved over time.
+
+* Should you unexpectedly observe the screen going black, you may have
+  accidentally touched the left screen border that toggles the user between
+  the base system and the runtime.
+
+* The GPU driver is currently limited to one client and must be restarted
+  when used by clients consecutively. This happens automatically when
+  switching between different presets. But when manually restarting a GPU
+  client like glmark2, the respawned component won't run until the gpu drv
+  got manually restarted also.
+
+
+Building the image from source
+------------------------------
+
+This flavor of Sculpt OS evolves in my
+[https://github.com/nfeske/genode - nfeske/genode] and
+[https://github.com/nfeske/genode-allwinner - nfeske/genode-allwinner] repositories,
+specifically the respective 'pinephone' topic branches. Note that those
+branches are not stable. Stabilized commits are routinely funneled upstream
+to the
+[https://github.com/genodelabs/genode - genodelabs/genode] and
+[https://github.com/genodelabs/genode-allwinner - genodelabs/genode-allwinner]
+repositories.
+
+You can find further instructions in the README of the genode-allwinner
+repository.
+
+The system image can be built via the following command from within the Genode
+build directory:
+
+! build/arm_v8a$ make run/sculpt_image KERNEL=hw \
+!                                      BOARD=pinephone \
+!                                      SCULPT=phone \
+!                                      DEPOT=omit
+
+During iterative development, it is recommended to use the 'run/sculpt_test'
+script using
+[https://genodians.org/nfeske/2021-09-20-pine-fun-pinephone-boot - fastboot].
+
