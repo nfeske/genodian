@@ -181,6 +181,7 @@ Also make sure to have the ROM module listed as <content> in the
 _pkg/unix/runtime_ so that it looks as follows:
 
 ! <content>
+!   <rom label="init"/>
 !   <rom label="bash.tar"/>
 !   <rom label="vfs"/>
 ! </content>
@@ -200,6 +201,7 @@ _archives_ file. So we can resolve this error by adding a corresponding <rom>
 entry to the _runtime_ file. The <content> should now look as follows:
 
 ! <content>
+!   <rom label="init"/>
 !   <rom label="bash.tar"/>
 !   <rom label="vfs"/>
 !   <rom label="vfs.lib.so"/>
@@ -328,6 +330,7 @@ For reference, the <rom> modules listed in the _runtime_ file's <content>
 node:
 
 ! <content>
+!   <rom label="init"/>
 !   <rom label="bash.tar"/>
 !   <rom label="vfs"/>
 !   <rom label="vfs.lib.so"/>

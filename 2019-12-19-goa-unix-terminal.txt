@@ -34,6 +34,7 @@ For reference, the _pkg/unix/runtime_ file should now look as follows:
 ! <runtime ram="100M" caps="5000" binary="init" config="unix.config">
 !
 !   <content>
+!     <rom label="init"/>
 !     <rom label="bash.tar"/>
 !     <rom label="vfs"/>
 !     <rom label="vfs.lib.so"/>
