@@ -397,7 +397,7 @@ to the web server. The way of how this content is uploaded is up to you.
 Personally, I'm using the fantastic [https://en.wikipedia.org/wiki/Rsync - rsync]
 tool with the following combination of arguments:
 
-! -rpltOvzu --checksum --chmod=Dg+s,ug+w,o-w,+X
+! -rpltOvz --checksum --chmod=Dg+s,ug+w,o-w,+X
 
 You may not believe me but that's not my poor attempt at ASCII art.
 Please use 'man rsync' to decrypt this information.
