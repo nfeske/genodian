@@ -45,14 +45,18 @@ Functionality covered
   * OpenGL test program using the GPU (glmark2)
   * Camera test, audio oscilloscope
   * Light-weight Unix-like system shell
+* _Edit (April 2023): Wifi_
 
 
 Installation
 ------------
 
-# Download the SD-card image from here:
+# Download experimental SD-card images from here:
 
   [https://depot.genode.org/nfeske/image]
+
+  _Edit (April 2023): an official PinePhone image for Sculpt OS 23.04 is_
+  _now [https://depot.genode.org/genodelabs/image - available] as well._
 
   You can find the disk image in two forms, as compressed .img.xz file
   or contained in a .zip file.
@@ -196,10 +200,11 @@ Commentary and caveats
 
   You can use vim to inspect the *system log* at _/report/log_.
 
-* The report-dump option captures the entire state of the
-  report file system (including the system log) at a regular interval
-  of one minutes to the SD-card. This allows you to inspect this
-  *diagnostic information offline* by browsing the SD-card on a regular PC.
+* The report-dump option combined with the system_clock-dummy option captures
+  the entire state of the report file system (including the system log) to the
+  root directory of the SD card.
+  This allows you to inspect this *diagnostic information offline* by browsing
+  the SD-card on a regular PC.
 
 * To take *screen shots*, enable the screenshot option in the software section.
   While enabled, a red dot is presented at the upper left screen corner,
@@ -209,9 +214,7 @@ Commentary and caveats
   SD-card offline.
 
 * Resource-heavy websites can bring down the morph browser. You can restart
-  it by using the "Restart" button in the gpu drv component. Since the
-  browser depends on the GPU driver, it will implicitly be restarted along
-  with the GPU driver.
+  it by using the "Restart" button.
 
 * The "Storage" section of the user interface looks out of place.
   This is because it was taken as is from the PC version of Sculpt OS,
@@ -230,11 +233,62 @@ Commentary and caveats
   accidentally touched the left screen border that toggles the user between
   the base system and the runtime.
 
-* The GPU driver is currently limited to one client and must be restarted
-  when used by clients consecutively. This happens automatically when
-  switching between different presets. But when manually restarting a GPU
-  client like glmark2, the respawned component won't run until the gpu drv
-  got manually restarted also.
+_(added in April 2023):_
+
+* One can select "Wifi" in the network part of the GUI, select an access point
+  and enter your passphrase, just like on the PC version of Sculpt. Since the
+  passphrase is not saved, however, one has to enter it each time when
+  connecting, or use the trick described below.
+
+* _Starting with the official Sculpt OS 23.04 version,_
+  _both 2 GiB and 3 GiB models are in principle supported. However, the 2 GiB_
+  _variant received almost no testing so far. The morph and jitsi presets are_
+  _not expected to work with only 2 GiB._
+
+* _When playing videos on the web browser, the sound is somewhat distorted,_
+  _like overdriven._
+
+* The jitsi preset starts a pre-configured Morph browser right into Jitsi
+  alongside the camera driver. The camera is operated in gray scale because we
+  found the colors provided by the sensor not really presentable. Later, we
+  may come back to work on the colors but until then, gray-scale looks nice
+  enough. When asked, select "Use Jitsi on the Website". As of now, the preset
+  is mainly intended to ease the testing of further performance optimizations.
+  It may not by suited for practical use yet.
+
+
+A few tips for your experimentation
+-----------------------------------
+
+_(added in April 2023 for the Sculpt OS 23.04 release):_
+
+As a life hack to avoid typing the same WPA passphrase again and again, we can
+exploit the fact that the underpinning of the system is a regular Sculpt OS.
+After connecting once to your wireless network, you can do the following:
+
+# Switch to the system-shell preset
+
+# Issue the following commands to the system shell
+
+  ! mkdir -p /rw/config/23.04
+  !cp /config/managed/wifi /rw/config/23.04/
+
+Whenever Sculpt OS starts, the content of _/rw/config/23.04/_ is copied to _/config_ (see the
+[https://genode.org/documentation/articles/sculpt-23-10#Making_customizations_permanent - documentation]).
+Now, with the hard-defined wifi configuration, we join the
+AP immediately when the wifi driver comes up. As a minor downside, the
+interactive AP selection is no longer offered. To revive it, remove the
+_/config/wifi_ file using the system shell.
+
+Note that also all the other Sculpt OS tricks work. For example, when saving a
+copy of _/config/managed/nic_router_ to /rw/config/23.04 while being connected
+to wifi, you can hard-wire the selection of the network uplink to wifi,
+sparing you the manual activation of wifi right after booting.
+
+Or, as another nicety, if you always want to enjoy the nano3d preset right
+after boot:
+
+! cp /config/presets/nano3d /rw/config/23.04/deploy
 
 
 Building the image from source
