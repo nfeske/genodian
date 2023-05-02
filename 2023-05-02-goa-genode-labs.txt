@@ -1,0 +1,58 @@
+
+
+                Goa tool under the umbrella of Genode Labs
+
+
+The Goa project was started in 2019 with the ambition to streamline the
+workflows of application developers targeting Genode, and Sculpt OS in
+particular. I maintained and improved the tool off-and-on as a personal
+project over the years. Now, coordinated with the release of Sculpt OS 23.04,
+Goa has become an official Genode-Labs project.
+
+Using Goa, application developers can rely on commodity build systems to
+create software for Genode. This is particularly useful for porting existing
+software, which often comes with project files for Autoconf, CMake, QMake,
+or a plain Makefile. Goa uses those existing project files and tools to create
+build artifacts that are compatible with Genode.
+
+It also leverages Genode's ability to run directly on Linux to provide a
+testbed for application scenarios. This enables rapid development-test cycles,
+not only while developing application code but also for integration tasks.
+Finally, it assists with the publishing of the created applications in a
+form suitable for Genode's package management. Software created via Goa
+can seamlessly be installed and deployed on Sculpt OS.
+
+The scope of the tool and the growing adoption call for multiple shoulders to
+carry its further evolution. To my delight, the Genode core team welcomed my
+suggestion to promote Goa to an official Genode-Labs project. I'm particularly
+grateful for [https://genodians.org/jschlatow/ - Johannes] taking over the
+lead maintainership of the project.
+
+The new home of Goa is now the "genodelabs" organization at GitHub:
+
+:Goa project at GitHub:
+
+  [https://github.com/genodelabs/goa]
+
+Timed with the release of Sculpt OS, the migration of Goa has been completed.
+The following notes are worth sharing.
+
+* Existing users, please follow Goa's installation steps again, with the
+  new home as reference. This is to ensure that Goa's 'update-goa' command
+  fetches updates from the right place.
+
+* Goa has just been updated to be binary compatible to Sculpt OS 23.04.
+  For targetting previous versions of Sculpt, you can switch Goa to
+  target a different release by specifying the desired version as argument
+  to the 'update-goa' command.
+
+* Goa's 'build' and 'run' commands use the official packages provided by
+  "genodelabs" instead of "nfeske" now. You should update the _archives_
+  and _used_apis_ files of your existing projects accordingly.
+
+* For new users, I have just updated (and re-tested) my Goa article series
+  ([https://genodians.org/nfeske/2019-12-13-goa-unix-bash - 1],
+  [https://genodians.org/nfeske/2019-12-19-goa-unix-terminal - 2],
+  [https://genodians.org/nfeske/2019-12-22-goa-unix-pipes - 3],
+  [https://genodians.org/nfeske/2020-01-16-goa-publish - 4]) to
+  the current version.
