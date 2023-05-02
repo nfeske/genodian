@@ -29,18 +29,18 @@ package.
 The GNU coreutils package is readily available for Genode. We can add it
 by appending the following line to our _pkg/unix/archives_ file:
 
-! nfeske/src/coreutils
+! genodelabs/src/coreutils
 
 After adding this line, the next invocation of 'goa run' will download
 the source code along with a ready-to-use binaries to _var/depot/_.
 In particular, you can find the binary at
-_var/depot/nfeske/bin/x86_64/coreutils/<version>/_.
+_var/depot/genodelabs/bin/x86_64/coreutils/<version>/_.
 Analogous to the bash package, described in the
 [https:2019-12-13-goa-unix-bash - first article],
 there is a single TAR archive containing all the files that comprise the
 coreutils installation.
 
-! $ tar tf var/depot/nfeske/bin/x86_64/coreutils/2021-02-22/coreutils.tar
+! $ tar tf var/depot/genodelabs/bin/x86_64/coreutils/2023-02-26/coreutils.tar
 ! ./
 ! ./lib/
 ! ...
@@ -194,7 +194,7 @@ forward:
 I'm sure, you guess what comes next. Let's enhance _pkg/unix/archives_ with
 the following line:
 
-! nfeske/src/vfs_pipe
+! genodelabs/src/vfs_pipe
 
 Also declare the "vfs_pipe.lib.so" ROM in our _pkg/unix/runtime_ file:
 
@@ -218,7 +218,7 @@ addition of coreutils. That is
 
 # Add vim to _pkg/unix/archives_
 
-  ! nfeske/src/vim
+  ! genodelabs/src/vim
 
 # Add the "vim.tar: ROM to _pkg/unix/runtime_
 
@@ -237,7 +237,7 @@ Genode log:
 Vim is the first Unix program that requires
 [https://en.wikipedia.org/wiki/Ncurses - ncurses], which is a library for
 interactive terminal applications. To make it available to our system,
-add 'nfeske/src/ncurses' to _pkg/unix/archives_ and
+add 'genodelabs/src/ncurses' to _pkg/unix/archives_ and
 '<rom label="ncurses.lib.so"/>' to _pkg/unix/runtime_.
 
 The next test run looks much better. Vim starts up successfully but is not
@@ -312,4 +312,6 @@ package, ready to be deployed on Sculpt OS.
 
 
 _Edit (2021-03-02): updated to Genode 21.02_
+
+_Edit (2023-05-02): updated to Sculpt OS 23.04_
 

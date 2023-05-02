@@ -3,7 +3,7 @@
            Goa - sticking together a little Unix (part 1)
 
 
-Whereas the [http://genodians.org/nfeske/2019-11-25-goa - first article] about
+Whereas the [https://genodians.org/nfeske/2019-11-25-goa - first article] about
 Goa was concerned with building software using commodity build systems, this
 article takes you on a ride of creating a small Unix OS out of Genode's
 ready-to-use building blocks, publishing the result, and deploying it on
@@ -20,7 +20,7 @@ Preparations
 ------------
 
 Before continuing, please make sure to have installed the Goa tool, which
-is available at [https://github.com/nfeske/goa]. If you have it installed
+is available at [https://github.com/genodelabs/goa]. If you have it installed
 already, please make sure the tool is up to date. You can issue the following
 command to update Goa to the latest version:
 
@@ -42,7 +42,7 @@ Let's pretend we don't know what we are doing and create an _archives_
 file with only bash listed, and an almost empty _runtime_ file.
 
 The _pkg/unix/archives_ file:
-! nfeske/src/bash
+! genodelabs/src/bash
 
 The _pkg/unix/runtime_ file:
 ! <runtime ram="100M" caps="5000" binary="init">
@@ -52,34 +52,37 @@ Let's see what happens when issuing the 'run' command we know from the
 previous article:
 
 ! $ goa run
-! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz
-! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz.sig
-! download nfeske/bin/x86_64/bash/2021-02-22.tar.xz
-! download nfeske/bin/x86_64/bash/2021-02-22.tar.xz.sig
-! download nfeske/bin/x86_64/init/2021-02-22.tar.xz
-! download nfeske/bin/x86_64/init/2021-02-22.tar.xz.sig
-! download nfeske/src/base-linux/2021-02-24.tar.xz
-! download nfeske/src/base-linux/2021-02-24.tar.xz.sig
-! download nfeske/src/bash/2021-02-22.tar.xz
-! download nfeske/src/bash/2021-02-22.tar.xz.sig
-! download nfeske/src/init/2021-02-22.tar.xz
-! download nfeske/src/init/2021-02-22.tar.xz.sig
-! download nfeske/api/base/2021-02-22.tar.xz
-! download nfeske/api/base/2021-02-22.tar.xz.sig
-! download nfeske/api/libc/2021-02-22.tar.xz
-! download nfeske/api/libc/2021-02-22.tar.xz.sig
-! download nfeske/api/noux/2020-04-16.tar.xz
-! download nfeske/api/noux/2020-04-16.tar.xz.sig
-! download nfeske/api/os/2021-02-22.tar.xz
-! download nfeske/api/os/2021-02-22.tar.xz.sig
-! download nfeske/api/posix/2020-05-17.tar.xz
-! download nfeske/api/posix/2020-05-17.tar.xz.sig
-! download nfeske/api/report_session/2020-03-25.tar.xz
-! download nfeske/api/report_session/2020-03-25.tar.xz.sig
-! download nfeske/api/timer_session/2020-10-08.tar.xz
-! download nfeske/api/timer_session/2020-10-08.tar.xz.sig
+
+! download genodelabs/bin/x86_64/base-linux/2023-04-25.tar.xz
+! download genodelabs/bin/x86_64/base-linux/2023-04-25.tar.xz.sig
+! download genodelabs/bin/x86_64/bash/2023-02-26.tar.xz
+! download genodelabs/bin/x86_64/bash/2023-02-26.tar.xz.sig
+! download genodelabs/bin/x86_64/init/2023-04-25.tar.xz
+! download genodelabs/bin/x86_64/init/2023-04-25.tar.xz.sig
+! download genodelabs/src/base-linux/2023-04-25.tar.xz
+! download genodelabs/src/base-linux/2023-04-25.tar.xz.sig
+! download genodelabs/src/bash/2023-02-26.tar.xz
+! download genodelabs/src/bash/2023-02-26.tar.xz.sig
+! download genodelabs/src/init/2023-04-25.tar.xz
+! download genodelabs/src/init/2023-04-25.tar.xz.sig
+! download genodelabs/api/base/2023-04-25.tar.xz
+! download genodelabs/api/base/2023-04-25.tar.xz.sig
+! download genodelabs/api/libc/2023-01-23.tar.xz
+! download genodelabs/api/libc/2023-01-23.tar.xz.sig
+! download genodelabs/api/noux/2023-02-26.tar.xz
+! download genodelabs/api/noux/2023-02-26.tar.xz.sig
+! download genodelabs/api/os/2023-04-16.tar.xz
+! download genodelabs/api/os/2023-04-16.tar.xz.sig
+! download genodelabs/api/posix/2020-05-17.tar.xz
+! download genodelabs/api/posix/2020-05-17.tar.xz.sig
+! download genodelabs/api/report_session/2023-03-12.tar.xz
+! download genodelabs/api/report_session/2023-03-12.tar.xz.sig
+! download genodelabs/api/sandbox/2021-06-24.tar.xz
+! download genodelabs/api/sandbox/2021-06-24.tar.xz.sig
+! download genodelabs/api/timer_session/2023-03-12.tar.xz
+! download genodelabs/api/timer_session/2023-03-12.tar.xz.sig
 ! Error: runtime lacks a configuration
-!  
+!
 !  You may declare a 'config' attribute in the <runtime> node, or 
 !  define a <config> node inside the <runtime> node.
 
@@ -89,13 +92,13 @@ Besides the binaries, it also fetches all source codes. You can find all the
 downloads at _var/depot/_. One particularly interesting directory is the
 binary archive for bash:
 
-! $ ls var/depot/nfeske/bin/x86_64/bash/2021-02-22/
+! $ ls var/depot/genodelabs/bin/x86_64/bash/2023-02-26/
 ! bash.tar
 
 It contains a single tar archive, which in turn, contains all installation
 files of bash. Let's take a look inside:
 
-! $ tar tf var/depot/nfeske/bin/x86_64/bash/2021-02-22/bash.tar
+! $ tar tf var/depot/genodelabs/bin/x86_64/bash/2023-02-26/bash.tar
 ! ./
 ! ./share
 ! ./share/doc
@@ -171,18 +174,22 @@ When trying to 'run' the scenario now, we see a bunch of error messages:
 ! [init -> unix] Error: vfs: environment ROM session denied ...
 
 The messages tell us that init requested the ROM module 'vfs' that is not
-available to the scenario, yet. To make it available, we have to
-declare it in the _archives_ and as <content> in the _runtime_ file.
-Let's add the following line to _pkg/unix/archive_:
+available to the scenario, yet.
+Also note that our _pkg/unix/runtime_ refers to Genode's init component
+in the attribute 'binary="init"'.
+To make both ingredients available to our scenario, we have to
+declare them in the _archives_ and as <content> in the _runtime_ file.
+Let's add the following lines to _pkg/unix/archive_:
 
-! nfeske/src/vfs
+! genodelabs/src/vfs
+! genodelabs/src/init
 
-Also make sure to have the ROM module listed as <content> in the
+Also make sure to have the ROM modules listed as <content> in the
 _pkg/unix/runtime_ so that it looks as follows:
 
 ! <content>
-!   <rom label="init"/>
 !   <rom label="bash.tar"/>
+!   <rom label="init"/>
 !   <rom label="vfs"/>
 ! </content>
 
@@ -196,13 +203,13 @@ This message tells us that the VFS server requests another ROM module, which
 is a shared library. The _vfs.lib.so_ contains the actual implementation
 of the virtual file system. It comes in the form of a library to enable its
 use either locally by an individual application or via the VFS server. The
-library is part of the 'nfeske/src/vfs' archive that is already listed in our
+library is part of the 'genodelabs/src/vfs' archive that is already listed in our
 _archives_ file. So we can resolve this error by adding a corresponding <rom>
 entry to the _runtime_ file. The <content> should now look as follows:
 
 ! <content>
-!   <rom label="init"/>
 !   <rom label="bash.tar"/>
+!   <rom label="init"/>
 !   <rom label="vfs"/>
 !   <rom label="vfs.lib.so"/>
 ! </content>
@@ -210,15 +217,21 @@ entry to the _runtime_ file. The <content> should now look as follows:
 When running the scenario again, we see a sign of hope:
 
 ! goa run
-! Genode 20.11-251-g676fd7d884a <local changes>
-! 17592186044415 MiB RAM and 8997 caps assigned to init
-! [init -> unix -> vfs] tar archive 'bash.tar' local at ...
+! Genode 23.02-146-g4bb4e60d8b0 <local changes>
+! 17592186044415 MiB RAM and 18997 caps assigned to init
 
-Yes! The VFS server is running and has successfully mounted the _bash.tar_
-archive.
+Not further errors! That means that the VFS server is running and has
+presumably mounted the _bash.tar_ archive. On a second terminal, you can
+indeed observe the VFS server showing up.
+
+$ ps u
+! ... [Genode] init
+! ... [Genode] init -> timer
+! ... [Genode] init -> unix
+! ... [Genode] init -> unix -> vfs
 
 The second piece of the puzzle is the 'fs_rom' server, which can be added
-to the <config> node with the following snippet:
+to the <config> node of _pkg/unix/runtime_ with the following snippet:
 
 ! <start name="vfs_rom" caps="100">
 !   <resource name="RAM" quantum="10M"/>
@@ -247,8 +260,9 @@ attribute to init's <config> node. Another try of 'goa run' reveals the
 following output.
 
 ! $ goa run
-! Genode 20.11-251-g676fd7d884a <local changes>
-! 17592186044415 MiB RAM and 8997 caps assigned to init
+
+! Genode 23.02-146-g4bb4e60d8b0 <local changes>
+! 17592186044415 MiB RAM and 18997 caps assigned to init
 ! [init -> unix] parent provides
 ! [init -> unix]   service "ROM"
 ! [init -> unix]   service "LOG"
@@ -268,7 +282,6 @@ following output.
 ! [init -> unix]   ELF binary: fs_rom
 ! [init -> unix]   priority:   0
 ! [init -> unix]   provides service ROM
-! [init -> unix -> vfs] tar archive 'bash.tar' local at ...
 ! [init -> unix] child "vfs" announces service "File_system"
 ! [init -> unix] child "vfs_rom" announces service "ROM"
 
@@ -278,11 +291,11 @@ let's give the bash shell a spin:
 ! <start name="/bin/bash" caps="1000">
 !   <resource name="RAM" quantum="10M" />
 !   <config>
+!     <libc stdin="/dev/null" stdout="/dev/log" stderr="/dev/log"
+!           rtc="/dev/null"/>
 !     <vfs>
 !       <dir name="dev"> <null/> <log/> </dir>
 !     </vfs>
-!     <libc stdin="/dev/null" stdout="/dev/log" stderr="/dev/log"
-!           rtc="/dev/null"/>
 !     <arg value="bash"/>
 !     <arg value="-c"/>
 !     <arg value="echo files at /dev: /dev/*"/>
@@ -317,14 +330,15 @@ The following parts are worth highlighting:
 
 When trying to 'goa run' the scenario now, we have to add a few more entries
 to our _archives_ and <content>, specifically because bash uses the C runtime
-(libc and libc) as well as the posix library. The full list of _archives_
+(libc and libm) as well as the posix library. The full list of _archives_
 now looks as follows:
 
-! nfeske/src/bash
-! nfeske/src/vfs
-! nfeske/src/fs_rom
-! nfeske/src/libc
-! nfeske/src/posix
+! genodelabs/src/bash
+! genodelabs/src/vfs
+! genodelabs/src/init
+! genodelabs/src/fs_rom
+! genodelabs/src/libc
+! genodelabs/src/posix
 
 For reference, the <rom> modules listed in the _runtime_ file's <content>
 node:
@@ -344,17 +358,10 @@ Once these stumbling blocks are out of the way, 'goa run' greets us with the
 following output:
 
 ! ...
-! [init -> unix] Warning: /bin/bash: incomplete environment ROM session (/bin/bash)
-! [init -> unix -> vfs] tar archive 'bash.tar' local at ...
 ! [init -> unix] child "vfs" announces service "File_system"
 ! [init -> unix] child "vfs_rom" announces service "ROM"
 ! [init -> unix -> /bin/bash] files at /dev: /dev/log /dev/null
 ! [init -> unix] child "/bin/bash" exited with exit value 0
-
-The warning about the "incomplete environment ROM session" is nothing to
-worry about. It stems from the fact that init is not able to obtain the
-ROM module of bash's executable right away since the ROM is provided by
-a service that was just started by init.
 
 The message "files at /dev: /dev/log /dev/null"
 is the output of bash command we have hoped for!
@@ -363,5 +370,6 @@ Granted, our scenario is still a far cry from being a Unix system.
 In the next episode, we will add an interactive terminal.
 [https://genodians.org/nfeske/2019-12-19-goa-unix-terminal - Read on...]
 
-
 _Edit (2021-03-02): updated to Genode 21.02_
+
+_Edit (2023-05-02): updated to Sculpt OS 23.04_

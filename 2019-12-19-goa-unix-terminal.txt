@@ -141,14 +141,14 @@ you can see a small mouse pointer. If you are curious how the system the
 GUI stack is assembled in detail, please have a look at _var/run/config_.
 But from the perspective of our Unix scenario, these exact details are not
 of interest. The only important point is that our scenario is now officially
-able to request a "Gui" and "Timer" service from the underlying
+able to request a "Gui" and a "Timer" service from the underlying
 system.
 
 With these preconditions in place, we can start a graphical terminal
-in our _unix.config_ by adding the following two <start> nodes:
+in our _unix.config_ by adding the following <start> node:
 
 ! <start name="terminal" caps="110">
-!   <resource name="RAM" quantum="8M"/>
+!   <resource name="RAM" quantum="10M"/>
 !   <provides> <service name="Terminal"/> </provides>
 !   <route>
 !     <service name="ROM" label="config">
@@ -177,7 +177,7 @@ Let's do this now. While we are at it, let's also add a <rom> node for the
 
 The following line must be added to _pkg/unix/archives_
 
-! nfeske/src/terminal
+! genodelabs/src/terminal
 
 The following two lines must be added to the runtime file's <content>:
 
@@ -190,39 +190,17 @@ The following two lines must be added to the runtime file's <content>:
 When trying 'goa run' again, we see that we exchanged the previous errors
 with two new ones. Let's call it progress:
 
-! [init -> unix -> terminal] Error: Could not open ROM session for "config"
+! [init -> unix -> terminal] Error: ROM-session creation failed (label="config" ...)
 ! ...
-! [init -> unix] Warning: terminal: lookup for service "Gui" failed
 
-The first error is easy to explain. We have configured the "terminal"
+The error is easy to explain. We have configured the "terminal"
 start node to fetch its configuration from a ROM called _terminal.config_
 but have not defined the ROM module so far. Let's add a new file
 _raw/terminal.config_ with an empty <config> node:
 
 ! <config/>
 
-The second error tells us that there is no way for the "terminal" to reach a
-"Gui" service. Let's take a look at the <route> rules for this component:
-
-! <route> <any-service> <parent/> </any-service> </route>
-
-This rule says that all service requests should directly go towards the
-surrounding Genode system, towards the parent of the component tree.
-However, in the <parent-provides> declaration at the beginning of the
-init <config> a "Gui" service is nowhere to be found. Hence, init
-refuses to ask the outside world for a "Gui" service on behalf of
-its child terminal. Let us enhance the <parent-provides> node with an entry
-for the GUI service:
-
-! <parent-provides>
-!   ...
-!   <service name="Gui"/>
-! </parent-provides>
-
-Now, when trying 'goa run' for the next time, we see that the complaint about
-the "Gui" service has vanished. Good news!
-However, as so often, the good news are accompanied with
-less good news, as seen in the log:
+With the file added, our next call of 'goa run' is answered as follows.
 
 ! [init -> unix -> terminal] Error: Uncaught exception of type
 !                            'Genode::Xml_node::Nonexistent_sub_node'
@@ -256,18 +234,17 @@ session that requests the ROM module named "VeraMono.ttf".
 With this configuration in place, the next attempt of 'goa run' yields a
 quite predictable result:
 
-! [init -> unix -> terminal] Error: ROM-session creation failed (...)
-! [init -> unix -> terminal] Error: Could not open ROM session for "VeraMono.ttf"
+! [init -> unix -> terminal] Error: could not open ROM session for "VeraMono.ttf"
 ! [init -> unix -> terminal] Error: failed to create <rom> VFS node
 ! [init -> unix -> terminal] Error:     name="VeraMono.ttf"
 ! [init -> unix -> terminal] Error: ROM-session creation failed (...)
-! [init -> unix -> terminal] Error: Could not open ROM session for "vfs_ttf.lib.so"
+! [init -> unix -> terminal] Error: could not open ROM session for "vfs_ttf.lib.so"
 ! [init -> unix -> terminal] Error: failed to create <ttf> VFS node
 ! [init -> unix -> terminal] Error:     name="regular"
 ! [init -> unix -> terminal] Error:     path="/VeraMono.ttf"
 ! [init -> unix -> terminal] Error:     size_px="16"
 
-The terminal configuration referred to two ROM modules that we haven't yet
+The terminal configuration refers to two ROM modules that we haven't yet
 included into the scenario. The "VeraMono.ttf" is the TrueType font data we
 tried to mount as <rom> node. The "vfs_ttf.lib.so" is the driver for the "ttf"
 pseudo file system. It is requested by the VFS when the <ttf> is encountered.
@@ -276,8 +253,8 @@ file's <content> node accordingly.
 
 The following lines must be added to _pkg/unix/archives_
 
-! nfeske/raw/ttf-bitstream-vera-minimal
-! nfeske/src/vfs_ttf
+! genodelabs/raw/ttf-bitstream-vera-minimal
+! genodelabs/src/vfs_ttf
 
 The following lines must be added to the <content> node in _pkg/unix/runtime_
 
@@ -287,7 +264,33 @@ The following lines must be added to the <content> node in _pkg/unix/runtime_
 !   <rom label="vfs_ttf.lib.so"/>
 ! </content>
 
-After these modifications, the next try of 'goa run' works without any error.
+Good news! On the next try of 'goa run', we can see the error gone.
+However, as so often, the good news are accompanied with less good news, as
+seen in the log:
+
+! [init -> unix] Warning: terminal: no route to service "Gui" (...)
+! [init -> unix -> terminal] Error: Gui-session creation failed (...)
+
+It tells us that there is no way for the "terminal" to reach a
+"Gui" service. Let's take a look at the <route> rules for this component:
+
+! <route> <any-service> <parent/> </any-service> </route>
+
+This rule says that all service requests should directly go towards the
+surrounding Genode system, towards the parent of the component tree.
+However, in the <parent-provides> declaration at the beginning of the
+init <config> a "Gui" service is nowhere to be found. Hence, init
+refuses to ask the outside world for a "Gui" service on behalf of
+its child terminal. Let us enhance the <parent-provides> node with an entry
+for the GUI service:
+
+! <parent-provides>
+!   ...
+!   <service name="Gui"/>
+! </parent-provides>
+
+Now, when trying 'goa run' for the next time, we see that the complaint about
+the "Gui" service has vanished.
 We see the black screen and the log output of '/bin/bash' looks as usual.
 
 
@@ -386,3 +389,5 @@ Of course, we feel a sudden urge to also execute the 'ls' command.
 
 The 'ls' command is a separate Unix command that is not yet part of our
 scenario. It is covered by the [https:2019-12-22-goa-unix-pipes - next episode...]
+
+_Edit (2023-05-02): updated to Sculpt OS 23.04_

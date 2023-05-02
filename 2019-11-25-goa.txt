@@ -9,9 +9,9 @@ and the use of run scripts. With Goa, I introduce a new tool that aims at
 largely removing these burdens from application developers.
 
 In contrast to the tools that come with Genode, which were designed for
-developing complete systems, [https://github.com/nfeske/goa - Goa] is focused
-on the development of individual applications. In a nutshell, it streamlines
-the following tasks:
+developing complete systems, [https://github.com/genodelabs/goa - Goa] is
+focused on the development of individual applications. In a nutshell,
+it streamlines the following tasks:
 
 # The porting of 3rd-party software to Genode, which typically involves
   * Downloading 3rd-party source code via Git, Subversion, or in the
@@ -88,17 +88,17 @@ To resolve this problem, we can tell Goa that our project needs to use the
 Genode base API, by placing a file named _used_apis_ with the following
 content into the project directory.
 
-! nfeske/api/base
+! genodelabs/api/base
 
 This line tells Goa that our project depends on Genode's base API that
 features the _base/log.h_ and _base/component.h_ headers. When issuing
 the command 'goa build' again, we see the following message:
 
-! download nfeske/api/base/2021-02-22.tar.xz
-! download nfeske/api/base/2021-02-22.tar.xz.sig
+! download genodelabs/api/base/2023-04-25.tar.xz
+! download genodelabs/api/base/2023-04-25.tar.xz.sig
 
 Goa automatically downloaded the base API for us and installed it into a fresh
-depot at var/depot/nfeske/api/base/2021-02-22. But not only that, it also
+depot at var/depot/genodelabs/api/base/2023-04-25/. But not only that, it also
 re-attempted the build of the program. If we take a look at
 _var/build/x86_64/_, we see the 'hello' executable. If the output was too
 unspectacular for your taste, you may append the '--verbose' argument to the
@@ -144,22 +144,24 @@ For running the scenario, we can use the 'goa run' command:
 
 ! hello$ goa run
 
-! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz
-! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz.sig
-! download nfeske/bin/x86_64/init/2021-02-22.tar.xz
-! download nfeske/bin/x86_64/init/2021-02-22.tar.xz.sig
-! download nfeske/src/base-linux/2021-02-24.tar.xz
-! download nfeske/src/base-linux/2021-02-24.tar.xz.sig
-! download nfeske/src/init/2021-02-22.tar.xz
-! download nfeske/src/init/2021-02-22.tar.xz.sig
-! download nfeske/api/os/2021-02-22.tar.xz
-! download nfeske/api/os/2021-02-22.tar.xz.sig
-! download nfeske/api/report_session/2020-03-25.tar.xz
-! download nfeske/api/report_session/2020-03-25.tar.xz.sig
-! download nfeske/api/timer_session/2020-10-08.tar.xz
-! download nfeske/api/timer_session/2020-10-08.tar.xz.sig
-! Genode 20.11-251-g676fd7d884a <local changes>
-! 17592186044415 MiB RAM and 8997 caps assigned to init
+! download genodelabs/bin/x86_64/base-linux/2023-04-25.tar.xz
+! download genodelabs/bin/x86_64/base-linux/2023-04-25.tar.xz.sig
+! download genodelabs/bin/x86_64/init/2023-04-25.tar.xz
+! download genodelabs/bin/x86_64/init/2023-04-25.tar.xz.sig
+! download genodelabs/src/base-linux/2023-04-25.tar.xz
+! download genodelabs/src/base-linux/2023-04-25.tar.xz.sig
+! download genodelabs/src/init/2023-04-25.tar.xz
+! download genodelabs/src/init/2023-04-25.tar.xz.sig
+! download genodelabs/api/os/2023-04-16.tar.xz
+! download genodelabs/api/os/2023-04-16.tar.xz.sig
+! download genodelabs/api/report_session/2023-03-12.tar.xz
+! download genodelabs/api/report_session/2023-03-12.tar.xz.sig
+! download genodelabs/api/sandbox/2021-06-24.tar.xz
+! download genodelabs/api/sandbox/2021-06-24.tar.xz.sig
+! download genodelabs/api/timer_session/2023-03-12.tar.xz
+! download genodelabs/api/timer_session/2023-03-12.tar.xz.sig
+! Genode 23.02-146-g4bb4e60d8b0 <local changes>
+! 17592186044415 MiB RAM and 18997 caps assigned to init
 ! [init -> hello] Hello
 
 We can see that Goa automatically installed the dependencies needed to
@@ -189,14 +191,15 @@ file _cmake_step2/import_ with the following content:
 
 ! LICENSE   := BSD
 ! VERSION   := master
-! DOWNLOADS := cmake_step2.svn
+! DOWNLOADS := cmake_step2.sparse-git
 !
-! URL(cmake_step2) := https://github.com/Kitware/CMake/trunk/Help/guide/tutorial/Step2
+! URL(cmake_step2) := https://github.com/Kitware/CMake
 ! REV(cmake_step2) := HEAD
 ! DIR(cmake_step2) := src
+! SPARSE_PATH(cmake_step2) := Help/guide/tutorial/Step2
 
-This import file uses Github's SVN bridge to download only the specified sub
-directory of the CMake project. Let's give it a try:
+This import file describes the download of only the specified sub
+directory of the CMake project from GitHub. Let's give it a try:
 
 ! cmake_step2$ goa import
 ! import  download https://github.com/Kitware/CMake/trunk/Help/guide/tutorial/Step2
@@ -234,10 +237,9 @@ Apparently, the example requires the standard C++ library. We can supply
 this API to the project by creating a _used_apis_ file with the following
 content:
 
-! nfeske/api/posix
-! nfeske/api/libc
-! nfeske/api/stdcxx
-! nfeske/api/base
+! genodelabs/api/posix
+! genodelabs/api/libc
+! genodelabs/api/stdcxx
 
 The 'posix' API is needed because - unlike a raw Genode component - the program
 starts at a 'main' function. The libc is needed as a dependency of the
@@ -247,14 +249,13 @@ When issuing the 'goa build' command again, we see that Goa downloads the
 required APIs and successfully builds the example program:
 
 ! cmake_step2$ goa build
-! download nfeske/api/base/2021-02-22.tar.xz
-! download nfeske/api/base/2021-02-22.tar.xz.sig
-! download nfeske/api/libc/2021-02-22.tar.xz
-! download nfeske/api/libc/2021-02-22.tar.xz.sig
-! download nfeske/api/posix/2020-05-17.tar.xz
-! download nfeske/api/posix/2020-05-17.tar.xz.sig
-! download nfeske/api/stdcxx/2020-11-26.tar.xz
-! download nfeske/api/stdcxx/2020-11-26.tar.xz.sig
+
+! download genodelabs/api/libc/2023-01-23.tar.xz
+! download genodelabs/api/libc/2023-01-23.tar.xz.sig
+! download genodelabs/api/posix/2020-05-17.tar.xz
+! download genodelabs/api/posix/2020-05-17.tar.xz.sig
+! download genodelabs/api/stdcxx/2022-04-27.tar.xz
+! download genodelabs/api/stdcxx/2022-04-27.tar.xz.sig
 ! [cmake_step2:cmake] -- Configuring done
 ! [cmake_step2:cmake] -- Generating done
 ! [cmake_step2:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
@@ -273,10 +274,10 @@ than the first hello example. This time, we need declare that our runtime
 requires content from other depot archives in addition to our program by
 creating a file _pkg/cmake_step2/archives_ with the following content:
 
-! nfeske/src/posix
-! nfeske/src/libc
-! nfeske/src/vfs
-! nfeske/src/stdcxx
+! genodelabs/src/posix
+! genodelabs/src/libc
+! genodelabs/src/vfs
+! genodelabs/src/stdcxx
 
 This way, our sub system incorporates the shared libraries found in those
 depot archives. A suitable _pkg/cmake_step2/runtime_ for running the program
@@ -314,55 +315,63 @@ and "24" its actual argument. The '<content>' lists all ROM modules required.
 With this runtime package in place, let's give the Tutorial a run:
 
 ! cmake_step2/$ goa run
+
 ! [cmake_step2:cmake] -- Configuring done
 ! [cmake_step2:cmake] -- Generating done
 ! [cmake_step2:cmake] -- Build files have been written to: .../cmake_step2/var/build/x86_64
 ! [cmake_step2:cmake] [100%] Built target Tutorial
-! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz
-! download nfeske/bin/x86_64/base-linux/2021-02-24.tar.xz.sig
-! download nfeske/bin/x86_64/init/2021-02-22.tar.xz
-! download nfeske/bin/x86_64/init/2021-02-22.tar.xz.sig
-! download nfeske/bin/x86_64/libc/2021-02-22.tar.xz
-! download nfeske/bin/x86_64/libc/2021-02-22.tar.xz.sig
-! download nfeske/bin/x86_64/posix/2021-02-22.tar.xz
-! download nfeske/bin/x86_64/posix/2021-02-22.tar.xz.sig
-! download nfeske/bin/x86_64/stdcxx/2021-02-22.tar.xz
-! download nfeske/bin/x86_64/stdcxx/2021-02-22.tar.xz.sig
-! download nfeske/bin/x86_64/vfs/2021-02-22.tar.xz
-! download nfeske/bin/x86_64/vfs/2021-02-22.tar.xz.sig
-! download nfeske/src/base-linux/2021-02-24.tar.xz
-! download nfeske/src/base-linux/2021-02-24.tar.xz.sig
-! download nfeske/src/init/2021-02-22.tar.xz
-! download nfeske/src/init/2021-02-22.tar.xz.sig
-! download nfeske/src/libc/2021-02-22.tar.xz
-! download nfeske/src/libc/2021-02-22.tar.xz.sig
-! download nfeske/src/posix/2021-02-22.tar.xz
-! download nfeske/src/posix/2021-02-22.tar.xz.sig
-! download nfeske/src/stdcxx/2021-02-22.tar.xz
-! download nfeske/src/stdcxx/2021-02-22.tar.xz.sig
-! download nfeske/src/vfs/2021-02-22.tar.xz
-! download nfeske/src/vfs/2021-02-22.tar.xz.sig
-! download nfeske/api/block_session/2020-05-26.tar.xz
-! download nfeske/api/block_session/2020-05-26.tar.xz.sig
-! download nfeske/api/file_system_session/2020-05-26.tar.xz
-! download nfeske/api/file_system_session/2020-05-26.tar.xz.sig
-! download nfeske/api/os/2021-02-22.tar.xz
-! download nfeske/api/os/2021-02-22.tar.xz.sig
-! download nfeske/api/report_session/2020-03-25.tar.xz
-! download nfeske/api/report_session/2020-03-25.tar.xz.sig
-! download nfeske/api/rtc_session/2020-03-25.tar.xz
-! download nfeske/api/rtc_session/2020-03-25.tar.xz.sig
-! download nfeske/api/so/2020-05-17.tar.xz
-! download nfeske/api/so/2020-05-17.tar.xz.sig
-! download nfeske/api/terminal_session/2020-04-16.tar.xz
-! download nfeske/api/terminal_session/2020-04-16.tar.xz.sig
-! download nfeske/api/timer_session/2020-10-08.tar.xz
-! download nfeske/api/timer_session/2020-10-08.tar.xz.sig
-! download nfeske/api/vfs/2020-11-26.tar.xz
-! download nfeske/api/vfs/2020-11-26.tar.xz.sig
-! Genode 20.11-251-g676fd7d884a <local changes>
-! 17592186044415 MiB RAM and 8997 caps assigned to init
+! download genodelabs/bin/x86_64/base-linux/2023-04-25.tar.xz
+! download genodelabs/bin/x86_64/base-linux/2023-04-25.tar.xz.sig
+! download genodelabs/bin/x86_64/init/2023-04-25.tar.xz
+! download genodelabs/bin/x86_64/init/2023-04-25.tar.xz.sig
+! download genodelabs/bin/x86_64/libc/2023-04-25.tar.xz
+! download genodelabs/bin/x86_64/libc/2023-04-25.tar.xz.sig
+! download genodelabs/bin/x86_64/posix/2023-04-25.tar.xz
+! download genodelabs/bin/x86_64/posix/2023-04-25.tar.xz.sig
+! download genodelabs/bin/x86_64/stdcxx/2023-01-23.tar.xz
+! download genodelabs/bin/x86_64/stdcxx/2023-01-23.tar.xz.sig
+! download genodelabs/bin/x86_64/vfs/2023-04-27.tar.xz
+! download genodelabs/bin/x86_64/vfs/2023-04-27.tar.xz.sig
+! download genodelabs/src/base-linux/2023-04-25.tar.xz
+! download genodelabs/src/base-linux/2023-04-25.tar.xz.sig
+! download genodelabs/src/init/2023-04-25.tar.xz
+! download genodelabs/src/init/2023-04-25.tar.xz.sig
+! download genodelabs/src/libc/2023-04-25.tar.xz
+! download genodelabs/src/libc/2023-04-25.tar.xz.sig
+! download genodelabs/src/posix/2023-04-25.tar.xz
+! download genodelabs/src/posix/2023-04-25.tar.xz.sig
+! download genodelabs/src/stdcxx/2023-01-23.tar.xz
+! download genodelabs/src/stdcxx/2023-01-23.tar.xz.sig
+! download genodelabs/src/vfs/2023-04-27.tar.xz
+! download genodelabs/src/vfs/2023-04-27.tar.xz.sig
+! download genodelabs/api/base/2023-04-25.tar.xz
+! download genodelabs/api/base/2023-04-25.tar.xz.sig
+! download genodelabs/api/block_session/2023-03-12.tar.xz
+! download genodelabs/api/block_session/2023-03-12.tar.xz.sig
+! download genodelabs/api/file_system_session/2023-03-12.tar.xz
+! download genodelabs/api/file_system_session/2023-03-12.tar.xz.sig
+! download genodelabs/api/net/2023-04-25.tar.xz
+! download genodelabs/api/net/2023-04-25.tar.xz.sig
+! download genodelabs/api/os/2023-04-16.tar.xz
+! download genodelabs/api/os/2023-04-16.tar.xz.sig
+! download genodelabs/api/report_session/2023-03-12.tar.xz
+! download genodelabs/api/report_session/2023-03-12.tar.xz.sig
+! download genodelabs/api/rtc_session/2023-03-12.tar.xz
+! download genodelabs/api/rtc_session/2023-03-12.tar.xz.sig
+! download genodelabs/api/sandbox/2021-06-24.tar.xz
+! download genodelabs/api/sandbox/2021-06-24.tar.xz.sig
+! download genodelabs/api/so/2020-05-17.tar.xz
+! download genodelabs/api/so/2020-05-17.tar.xz.sig
+! download genodelabs/api/terminal_session/2023-03-12.tar.xz
+! download genodelabs/api/terminal_session/2023-03-12.tar.xz.sig
+! download genodelabs/api/timer_session/2023-03-12.tar.xz
+! download genodelabs/api/timer_session/2023-03-12.tar.xz.sig
+! download genodelabs/api/vfs/2023-02-26.tar.xz
+! download genodelabs/api/vfs/2023-02-26.tar.xz.sig
+! Genode 23.02-146-g4bb4e60d8b0 <local changes>
+! 17592186044415 MiB RAM and 18997 caps assigned to init
 ! [init -> cmake_step2] The square root of 24 is 4.89898
+! [init] child "cmake_step2" exited with exit value 0
 
 We see that Goa takes care of downloading all dependencies needed to
 host the subsystem and subsequently executes the scenario. The program
@@ -375,7 +384,7 @@ The next step
 The intro above covers just a tiny part of the scope of Goa.
 
 For further exploration, read the next episode about
-[http://genodians.org/nfeske/2019-12-13-goa-unix-bash - using Goa to create a little Unix]...
+[https://genodians.org/nfeske/2019-12-13-goa-unix-bash - using Goa to create a little Unix]...
 
 Please also feel welcome to explore Goa on your own. A good starting point
 would be the built-in help command:
@@ -384,5 +393,6 @@ would be the built-in help command:
 
 If you have feedback, please don't hesitate to reach out!
 
-
 _Edit (2021-03-02): updated to Genode 21.02_
+
+_Edit (2023-05-02): updated to Sculpt OS 23.04_
