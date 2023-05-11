@@ -1,0 +1,209 @@
+
+
+                    What's new in Sculpt OS 23.04
+
+
+
+With Sculpt OS 23.04 being in the wild since almost two weeks, it's time to
+put the spotlight on the most prominent changes.
+
+You can find the latest Sculpt OS image along with up-to-date documentation
+here:
+
+:Sculpt download page:
+
+  [https://genode.org/download/sculpt]
+
+:Up-to-date documentation:
+
+  [https://genode.org/documentation/articles/sculpt-23-04]
+
+
+Presets of ready-to-deploy system scenarios
+-------------------------------------------
+
+Earlier versions of Sculpt OS required elaborate manual steps to bring up a
+moderately interesting system.
+Because of this barrier of entry, the real beauty of Sculpt OS was all too
+easy to miss by casual reviewers.
+Now, Sculpt 23.04 comes with several examples by
+default, which allow you to instantly bring up a whole system composition
+at the convenience of a mouse click.
+The system menu at the upper-left screen corner reveals a couple of presets
+to play with. As a first test, you may load the nano3d preset.
+
+[image sculpt_23_04_presets 40%]
+
+When initially loading a preset, Sculpt will automatically download all the
+needed ingredients on the selected (aka "used") file system and start the
+components. Sculpt's component graph makes the structure of the running system
+fully transparent to you. So you can see how each preset is composed.
+Once installed, the loading of a preset can be imagined as the boot into a
+separate operating system, but it takes only a fraction of a second, and
+you can switch between presets almost instantly. The example presets are:
+
+:empty: Resets the runtime to the initial state.
+
+:falkon web browser: Contains everything needed to run a disposable
+  web browser. The browser lives completely in plain RAM, which you can
+  verify by clicking on the falkon component in the graph. It is connected
+  to the GUI, the network (NIC router), and the RAM file system but is
+  not related to any storage device. The browser's audio and capturing
+  interfaces are connected to the black-hole component, which mimics
+  those devices without granting any hardware access.
+
+:nano3d: A simple software-rendering demo useful as a bare-bones example.
+
+:window manager: The scenario is meant as a starting point for an actually
+  useful desktop system. It consists of the window-management components
+  needed to properly remember your window positions and to use virtual
+  desktops, and it spawns a system shell that gives you access to Sculpt's
+  config and report file systems. Using the system shell, you can
+  control and configure your system without relying on Sculpt's
+  administrative user interface.
+
+  A few words about using the window manager in practice:
+  By editing _rw/recall/window_layouter/recall/rules_ using vim, you can
+  directly manipulate the data model of the window manager, e.g., changing
+  window positions, or assigning a window to a different virtual screen.
+  You can go pretty wild, for example by making a backup of your _rules_ file
+  at one point, just to copy it back later to restore the original window
+  arrangement.
+  The window manager responds to the 'super' key.
+  To interactively switch between virtual screens, use 'super+1', 'super+2',
+  etc., the maximized-state of the focused window can be toggled via
+  'super-enter', just to name the two most important shortcuts.
+
+The presets feature is not only useful as an easy gateway for exploring Sculpt
+OS but it also allows you to craft different deploy configurations for
+the various use cases of your machine, and switch between these tailored
+system scenarios on demand.
+
+The presets available in the system menu at the upper-left screen corner
+correspond to the files present at _/config/presets/_. Each file is a
+_deploy_ configuration. You can turn the currently running system into
+a preset by copying _/config/managed/deploy_ as new file to
+_/config/presets/_.
+
+To keep your custom preset available after reboot, follow the usual pattern
+described in the documentation of
+[https://genode.org/documentation/articles/sculpt-23-04#Making_customizations_permanent - Making customizations permanent]
+by copying the file to _/config/23.04/presets/_ at your Sculpt partition.
+
+
+On-target system update
+-----------------------
+
+Starting with version 23.04, Sculpt OS has become able to perform system
+updates interactively.
+With having your boot medium selected for the use by Sculpt, the system menu
+at the upper-left screen corner provides you with a convenient user interface
+for discovering and downloading new versions, and for switching between the
+installed system images.
+
+[image sculpt_23_04_check_updates 50%]
+
+The upper part of the dialog allows you to select the system-image provider.
+By default, the provider is set to the one of your currently running system
+image. But you have to option to obtain images from alternative providers,
+or even add a new custom provider by using the "Edit" button. Under the
+hood, each listed provider corresponds a directory in your _depot/_ at the
+sculpt partition.
+When adding a custom provider, it will show up as a new directory there.
+The lower part of the dialog presents the information about the currently
+running system image for reference.
+
+The check-for-updates button downloads the information about available
+images from the selected provider. This information is the presented along
+with the already downloaded images as exemplified in the following screenshot.
+
+[image sculpt_23_04_update 50%]
+
+The little "..." dots indicate that change-log information is available when
+clicking on the entry. The download button fetches the image. Once fetched,
+the download button turns into an install button. You can select any present
+image for your next boot via the corresponding install button. Under the hood,
+this operation copies the content of the
+_depot/<provider>/image/sculpt-<board>-<version>/_ directory to your _/boot/_
+directory.
+Note that you can switch back and forth between different versions this way.
+For example, should a new version not behave to your full satisfaction, you
+can easily switch back to the previous one by using the install button of the
+original version. As a precaution, it is good to have downloaded the initial
+Sculpt version you are using. In the worst case, should a new version fail to
+boot, you can still manually copy this downloaded original version from your
+local _depot/_ to your boot directory using a live USB system.
+
+Once an image is installed, the dialog tells you "reboot to activate".
+One way to do that is by changing the system state in _/config/system_ to
+"reset".
+
+As a practical tidbit, the system image of Sculpt OS resides at the _/boot/_
+directory of the "Genode" partition of the boot medium. E.g., when using a USB
+stick as boot medium on the PC, the boot directory resides on the 3rd
+partition of the USB stick. To update the Sculpt system image, make sure to
+have selected your boot partition for "use" by Sculpt. Should your boot medium
+differ from your regular Sculpt partition, e.g., when using an entire hard
+disk as one Sculpt partition, you may need to "un-use" your regular Sculpt
+partition and temporarily "use" your boot USB stick instead.
+
+
+Mobile Sculpt OS on the PinePhone
+---------------------------------
+
+For the first time, we have released Sculpt OS for two different CPU
+architectures simultaneously, namely 64-bit x86 and 64-bit ARM.
+
+Besides the regular Sculpt OS image for the PC, we published a
+ready-to-use image for the PinePhone.
+It features a
+[https://genodians.org/nfeske/2023-01-05-mobile-user-interface - custom user interface],
+voice calls and mobile-data connectivity, wifi connectivity, device controls
+(battery, brightness, volume, mic, reset, shutdown), and a variety of
+installable software. Among the installable applications, there is the
+Chromium-based Morph web browser, an OpenGL demo using the GPU, tests for the
+camera and microphone, as well as a light-weight Unix-like system shell.
+
+Thanks to the presets mechanism introduced above, the limited resources of the
+phone can be accounted and fully leveraged for each preset individually, while
+making the system extremely versatile. Here is an glimpse on the presets that
+come by default.
+
+[image pinephone_scenarios 100%]
+  The variety of presets includes the Morph browser, GLMark2, a system shell,
+  a simple oscilloscope, and camera test.
+
+Beneath the surface of the mobile user interface, which we specifically
+designed for the touch screen of the phone, the underpinnings of the PinePhone
+variant are nearly identical to Sculpt OS on the PC. Speaking of the custom
+user interface, the functionality of Sculpt's '+' menu can be found in the
+software section of the UI. The following screenshot shows how a software
+provider can be manually added (left). Once added, the dialog allows you to
+browse the components offered by the selected provider.
+
+[image new_software_source]
+
+Once a component is selected, it can be downloaded and integrated into the
+system. The integration step resembles the freedom known from the PC version
+of Sculpt.
+
+[image add_component]
+
+As a note of caution, the mobile variant of Sculpt OS is still incomplete
+in various respects. Please consider reading the
+[https://genodians.org/nfeske/2023-02-01-mobile-sculpt - dedicated posting]
+to learn more about the current state of development.
+
+
+Up-to-date drivers ported from Linux version 6.1.20
+---------------------------------------------------
+
+Sculpt OS leverages driver code ported from the Linux kernel for various
+peripherals such as Wifi, USB, display, or camera. But unlike
+Linux that executes all those drivers inside the monolithic Linux kernel,
+Sculpt runs each driver sandboxed in a dedicated component that is restricted
+to the specific device at hand.
+
+For Sculpt OS 23.04, we updated all Linux-based drivers to the recent kernel
+version 6.1.20. So Sculpt users benefit from the enormous efforts of the Linux
+kernel community targeting modern hardware.
