@@ -153,8 +153,6 @@ in our _unix.config_ by adding the following <start> node:
 !   <route>
 !     <service name="ROM" label="config">
 !       <parent label="terminal.config"/> </service>
-!     <service name="Framebuffer"> <child name="nit_fb"/> </service>
-!     <service name="Input">       <child name="nit_fb"/> </service>
 !     <any-service> <parent/> </any-service>
 !   </route>
 ! </start>
