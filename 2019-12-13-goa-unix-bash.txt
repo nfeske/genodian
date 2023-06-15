@@ -137,6 +137,10 @@ comes to the rescue.
   result appear to the surrounding system as a single component. We can
   use it to host the composition of the VFS, 'fs_rom', and bash.
 
+Note that our _pkg/unix/runtime_ refers to Genode's init component
+in the attribute 'binary="init"'. So as a whole, our subsystem will be an
+instance of init. Internally, init will host several child components
+and manage their resources and relationships according to its configuration.
 Let's start with a fresh init that hosts only the VFS server by
 placing the following <config> node inside the <runtime> node of the
 _pkg/unix/runtime_ file:
@@ -166,17 +170,30 @@ _pkg/unix/runtime_ file:
 The <default-policy> expresses that any client should be able to access
 the root of the virtual file system in a read-only fashion.
 
-When trying to 'run' the scenario now, we see a bunch of error messages:
+When trying to 'run' the scenario now, we see a bunch of messages:
 
 ! $ goa run
+! ... config <parent-provides> mentions a timer service;
+!     consider adding <timer/> as a required runtime service
 ! Genode 20.11-251-g676fd7d884a <local changes>
 ! 17592186044415 MiB RAM and 8997 caps assigned to init
 ! [init -> unix] Error: vfs: environment ROM session denied ...
 
-The messages tell us that init requested the ROM module 'vfs' that is not
-available to the scenario, yet.
-Also note that our _pkg/unix/runtime_ refers to Genode's init component
-in the attribute 'binary="init"'.
+The first message points out that init's '<parent-provides>' declaration
+refers to a service that should better also be announced as a requirement in the
+_runtime_ file. This can be done by adding the following '<requires>' node
+inside the '<runtime>' node.
+
+! <runtime>
+!   ...
+!   <requires>
+!     <timer/>
+!   </requires>
+!   ...
+! </runtime>
+
+The subsequent "Error:" messages tell us that init requested the ROM module
+'vfs' that is not available to the scenario, yet.
 To make both ingredients available to our scenario, we have to
 declare them in the _archives_ and as <content> in the _runtime_ file.
 Let's add the following lines to _pkg/unix/archive_:
