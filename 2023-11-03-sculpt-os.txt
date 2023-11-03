@@ -1,0 +1,173 @@
+
+
+                    What's new in Sculpt OS 23.10
+
+
+My personal highlights and a few technical tidbits about the just released
+Sculpt OS version 23.10, putting the spotlight on the Framework laptop,
+the PinePhone, and the MNT Reform laptop.
+
+Following the somewhat formal
+[https://genode.org/news/sculpt-os-release-23.10 - announcement] of the
+release last week, I'd like to share a more personal take on the
+new version.
+
+The first personal highlight is the fact that we managed to deliver the new
+version in a polished state simultaneously for three vastly different
+platforms.
+
+[image sculpt_23_10_platforms]
+
+The machine on the left is my (slightly
+[https://genodians.org/nfeske/2021-04-10-mntre-trackball - personalized])
+[https://mntre.com - MNT Reform] open-source-hardware laptop, which
+I greatly enjoy in the evening hours for various hobby projects.
+In the center, you see the distinctive component graph of Sculpt OS
+on the PinePhone.
+On the right is a beefy Intel-based Framework Gen12 laptop, which serves
+as my primary work horse.
+Sculpt OS 23.10 improves the user experience on each of them. Before going
+into details, however, let me point you to the official download page and
+the updated documentation.
+
+:Sculpt download page:
+
+  [https://genode.org/download/sculpt]
+
+:Up-to-date documentation:
+
+  [https://genode.org/documentation/articles/sculpt-23-10]
+
+
+Framework laptop
+################
+
+Even though I have been routinely using Sculpt OS 23.04 on the Intel-Gen12
+Framework laptop, I had to live with quite a few compromises. First, the
+trackpad behaved quite erratically when using the PS/2 emulation provided by the
+BIOS. Second, Genode's ACPICA component was incompatible with the Framework
+hardware, rendering low-level platform details like the battery state
+unavailable. Third, the Fn key of the keyboard apparently did not work, which
+was quite inconvenient because some common keys like page-up/down are placed
+on the Fn layer. The non-working Fn key also prevented me from controlling the
+keyboard backlight. Fourth, whenever I put CPU-intensive load on the system,
+noise of the fans would become obtrusive. After such a situation, the
+fans kept spinning (at a low rate) even long after removing the load. The
+power-management firmware on these modern machines seems to have a strange
+inner life.
+
+Sculpt 23.10 addresses those issues. After having solved the compatibility
+problem of the ACPICA component, we were taken by surprise: Not only did
+all the nice low-level platform features like battery state or
+system-power-off become available, but the Fn key became fully functional as
+well! On the new Sculpt version, I am using ACPICA in the form of the battery
+(2023-10-19) component as provided by Alexander's (alex-ab) depot.
+
+[image sculpt_23_10_battery]
+
+The Intel-Gen12 Framework laptop has an excessive amount of CPU cores.
+There are six high-performance cores with each having two hyperthreads,
+which are accompanied by 8 additional energy-efficient cores. At this
+scale, Sculpt's ability to restrict components to only a portion of CPU
+cores becomes handy. For example, when installing the Falkon web browser
+from cproc's depot, here is how I define the browser's CPU affinity:
+
+[image sculpt_23_10_affinity]
+
+The right-most 2x2 cores are energy-efficient cores. By restricting
+the browser to only those cores, a JavaScript-heavy website will hardly ever
+get my fans spinning. Now comes the nicest part: By installing the
+new interactive CPU-frequency tool provided by Alexander's depot,
+we can monitor and control the power characteristics of all those CPUs.
+
+[image sculpt_23_10_frequency]
+
+The 20 cores are not just glorious to look at, but you can dynamically modify
+the power profile of each, or all at once. Before I took the screenshot, I
+started a YouTube video at full resolution. One can nicely see how the four
+last cores have heated up to 61 degrees while the other cores are happily
+chugging along at 10 degrees less.
+
+Now being able to dynamically tune CPU-power parameters, I can easily push the
+hardware to the maximum performance when needed, or calm the machine down to
+fan-less operation. The sense of control is nothing short of satisfying.
+To learn more about the new interactive CPU controls, let me point you the
+Alexander's
+[https://genodians.org/alex-ab/2023-10-23-msr - dedicated article].
+
+As as remaining caveat when using Sculpt OS on the Framework,
+the laptop has no physical mouse buttons. The left mouse button is
+emulated by the trackpad. I remapped the right AltGr and Ctrl keys to
+the middle and right mouse buttons by filtering the PS/2 input as follows:
+! <remap>
+!   <input name="ps2"/>
+!   <key name="KEY_RIGHTALT"  to="BTN_MIDDLE"/>
+!   <key name="KEY_RIGHTCTRL" to="BTN_RIGHT"/>
+! </remap>
+This looks a little bit like a hack. And it is. But it gets me through the day.
+Down the road, we will equip Sculpt with a proper touchscreen driver,
+eliminating the need for any PS/2 emulation. If you are eager to test-drive a
+prototype, you can give the Sculpt image 2023-11-03 offered by chelmuth a try
+and turn off the PS/2 emulation in the BIOS.
+
+
+PinePhone
+#########
+
+Since the release of the first image for the PinePhone featuring our custom
+[https://genodians.org/nfeske/2023-01-05-mobile-user-interface - user interface],
+we continuously improved the user experience according to the feedback of
+early adopters. I'm especially grateful for the constructive comments received
+in the [https://forum.pine64.org/showthread.php?tid=14780 - Pine64 forum],
+which led to a number of UI tweaks like the dialing of really long numbers,
+or the use of '#' and '*' characters in phone numbers, or a sensible
+reordering of UI elements.
+
+The most technical user-experience improvement, however, is the addition of a
+screensaver for conserving energy. The screensaver kicks in after a minute of
+user inactivity in the administrative user interface. It also can be manually
+activated by pressing the power button. While the screen is blanked, a press
+of the power button enables the display again.
+
+Under the hood, Sculpt completely removes the drivers for the display and the
+touchscreen while the screen is blanked, which considerably reduces the power
+draw. The system also switches the CPU to economic mode while the screen is
+blanked. Here are some illustrative data points:
+
+! Max brightness in performance mode: 2.8 W
+! Max brightness in economic mode:    2.6 W
+! Low brightness in economic mode:    1.7 W
+! Screensaver:                        1.0 W
+
+PinePhone users of Sculpt 23.04 can switch to the new version via the built-in
+system-update dialog. New users can find ready-to-use disk images at the
+Sculpt download page linked above.
+Regarding the use of the system, let me refer you to my previous
+[https://genodians.org/nfeske/2023-02-01-mobile-sculpt - article] as the
+steps given there still apply.
+
+
+MNT Reform
+##########
+
+Thanks to the work by [https://genodians.org/skalk/index - Stefan], Sculpt
+OS 23.10 is readily available for the MNT Reform laptop. From an existing
+installation of Sculpt 23.04, one can switch to the new version by selecting
+the image 2023-10-24 offered by 'skalk' in the system-update dialog.
+
+[image sculpt_23_10_update]
+
+For preparing a new SD-card, you can download the image
+[https://depot.genode.org/skalk/image/ - here].
+Compared to the previous version, the user interface got more responsive,
+downloads are much quicker now, and the Falkon web browser runs noticeably
+faster.
+
+The MNT-Reform image comes with custom presets curated by Stefan.
+Thanks to these presets, one can install and use a web browser in just
+few seconds or bring up a minimal desktop with a window manager as a starting
+point for adding further components.
+For the curious, Stefan also happens to provide a preset for running the Debian
+installer in a VM. However, as he told me, this preset is merely an
+experimentation ground today.
+
