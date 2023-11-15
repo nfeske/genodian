@@ -24,7 +24,7 @@ is available at [https://github.com/genodelabs/goa]. If you have it installed
 already, please make sure the tool is up to date. You can issue the following
 command to update Goa to the latest version:
 
-! goa update-goa
+! $ goa update-goa
 
 
 Hello bash
@@ -35,70 +35,70 @@ We start with a new Goa project appropriately named 'unix' that hosts
 a runtime package but no source code.
 
 ! $ mkdir unix
+
 ! $ cd unix
-! $ mkdir -p pkg/unix
+
+! unix$ mkdir -p pkg/unix
 
 Let's pretend we don't know what we are doing and create an _archives_
-file with only bash listed, and an almost empty _runtime_ file.
+file with only bash listed, and an almost empty _runtime_ file. The runtime
+starts the binary 'init', which is supposed to be a ROM module.
 
 The _pkg/unix/archives_ file:
 ! genodelabs/src/bash
 
 The _pkg/unix/runtime_ file:
 ! <runtime ram="100M" caps="5000" binary="init">
+!   <content>
+!     <rom label="init"/>
+!   </content>
 ! </runtime>
 
 Let's see what happens when issuing the 'run' command we know from the
 previous article:
 
-! $ goa run
+! unix$ goa run
 
-! download genodelabs/bin/x86_64/base-linux/2023-04-25.tar.xz
-! download genodelabs/bin/x86_64/base-linux/2023-04-25.tar.xz.sig
-! download genodelabs/bin/x86_64/bash/2023-02-26.tar.xz
-! download genodelabs/bin/x86_64/bash/2023-02-26.tar.xz.sig
-! download genodelabs/bin/x86_64/init/2023-04-25.tar.xz
-! download genodelabs/bin/x86_64/init/2023-04-25.tar.xz.sig
-! download genodelabs/src/base-linux/2023-04-25.tar.xz
-! download genodelabs/src/base-linux/2023-04-25.tar.xz.sig
-! download genodelabs/src/bash/2023-02-26.tar.xz
-! download genodelabs/src/bash/2023-02-26.tar.xz.sig
-! download genodelabs/src/init/2023-04-25.tar.xz
-! download genodelabs/src/init/2023-04-25.tar.xz.sig
-! download genodelabs/api/base/2023-04-25.tar.xz
-! download genodelabs/api/base/2023-04-25.tar.xz.sig
-! download genodelabs/api/libc/2023-01-23.tar.xz
-! download genodelabs/api/libc/2023-01-23.tar.xz.sig
-! download genodelabs/api/noux/2023-02-26.tar.xz
-! download genodelabs/api/noux/2023-02-26.tar.xz.sig
-! download genodelabs/api/os/2023-04-16.tar.xz
-! download genodelabs/api/os/2023-04-16.tar.xz.sig
+! download genodelabs/bin/x86_64/bash/2023-10-24.tar.xz
+! download genodelabs/bin/x86_64/bash/2023-10-24.tar.xz.sig
+! download genodelabs/src/bash/2023-10-24.tar.xz
+! download genodelabs/src/bash/2023-10-24.tar.xz.sig
+! download genodelabs/api/libc/2023-10-03.tar.xz
+! download genodelabs/api/libc/2023-10-03.tar.xz.sig
+! download genodelabs/api/noux/2023-06-15.tar.xz
+! download genodelabs/api/noux/2023-06-15.tar.xz.sig
 ! download genodelabs/api/posix/2020-05-17.tar.xz
 ! download genodelabs/api/posix/2020-05-17.tar.xz.sig
-! download genodelabs/api/report_session/2023-03-12.tar.xz
-! download genodelabs/api/report_session/2023-03-12.tar.xz.sig
-! download genodelabs/api/sandbox/2021-06-24.tar.xz
-! download genodelabs/api/sandbox/2021-06-24.tar.xz.sig
-! download genodelabs/api/timer_session/2023-03-12.tar.xz
-! download genodelabs/api/timer_session/2023-03-12.tar.xz.sig
-! Error: runtime lacks a configuration
+! [unix] Error: runtime lacks a configuration
 !
 !  You may declare a 'config' attribute in the <runtime> node, or 
 !  define a <config> node inside the <runtime> node.
 
-We can see that Goa automatically downloaded bash along with its dependencies
-such as the libc, and transitive dependencies such as Genode's base API.
+Let's follow the advice by adding an empty '<config>' node to our
+_pkg/unix/runtime_ file:
+
+! <runtime ram="100M" caps="5000" binary="init">
+!   <config/>
+!   <content>
+!     <rom label="init"/>
+!   </content>
+! </runtime>
+
+Besides the error message, we could see that Goa automatically downloaded bash
+along with its dependencies such as the libc.
 Besides the binaries, it also fetches all source codes. You can find all the
 downloads at _var/depot/_. One particularly interesting directory is the
 binary archive for bash:
 
-! $ ls var/depot/genodelabs/bin/x86_64/bash/2023-02-26/
+! unix$ ls var/depot/genodelabs/bin/x86_64/bash/2023-10-24/
+
 ! bash.tar
 
 It contains a single tar archive, which in turn, contains all installation
 files of bash. Let's take a look inside:
 
-! $ tar tf var/depot/genodelabs/bin/x86_64/bash/2023-02-26/bash.tar
+! unix$ tar tf var/depot/genodelabs/bin/x86_64/bash/2023-10-24/bash.tar
+
 ! ./
 ! ./share
 ! ./share/doc
@@ -112,13 +112,39 @@ Genode as a single ROM module. Let's add it to the <content> of the
 _pkg/unix/runtime_:
 
 ! <runtime ram="100M" caps="5000" binary="init">
+!   <config/>
 !   <content>
+!     <rom label="init"/>
 !     <rom label="bash.tar"/>
 !   </content>
 ! </runtime>
 
-After issuing 'goa run' again, you can find _bash.tar_ added to the _var/run/_
-directory, which comprises all the ROM modules of our Genode system.
+After issuing 'goa run' again, Goa downloads the additional packages
+needed to run our _pkg/unix_ on Linux, integrates the scenario, and starts it.
+
+! download genodelabs/bin/x86_64/base-linux/2023-10-24.tar.xz
+! download genodelabs/bin/x86_64/base-linux/2023-10-24.tar.xz.sig
+! download genodelabs/bin/x86_64/init/2023-10-24.tar.xz
+! download genodelabs/bin/x86_64/init/2023-10-24.tar.xz.sig
+! download genodelabs/src/base-linux/2023-10-24.tar.xz
+! download genodelabs/src/base-linux/2023-10-24.tar.xz.sig
+! download genodelabs/src/init/2023-10-24.tar.xz
+! download genodelabs/src/init/2023-10-24.tar.xz.sig
+! download genodelabs/api/base/2023-10-24.tar.xz
+! download genodelabs/api/base/2023-10-24.tar.xz.sig
+! download genodelabs/api/os/2023-08-21.tar.xz
+! download genodelabs/api/os/2023-08-21.tar.xz.sig
+! download genodelabs/api/report_session/2023-05-26.tar.xz
+! download genodelabs/api/report_session/2023-05-26.tar.xz.sig
+! download genodelabs/api/sandbox/2023-10-03.tar.xz
+! download genodelabs/api/sandbox/2023-10-03.tar.xz.sig
+! download genodelabs/api/timer_session/2023-10-03.tar.xz
+! download genodelabs/api/timer_session/2023-10-03.tar.xz.sig
+! Genode sculpt-23.10
+! 17592186044415 MiB RAM and 18997 caps assigned to init
+
+You can find _bash.tar_ added to the _var/run/_ directory, which comprises all
+the ROM modules of our Genode system.
 
 Of course, we cannot start a TAR archive. It is not an executable after
 all. We rather need to access the content of the archive. Here, the
@@ -142,8 +168,8 @@ in the attribute 'binary="init"'. So as a whole, our subsystem will be an
 instance of init. Internally, init will host several child components
 and manage their resources and relationships according to its configuration.
 Let's start with a fresh init that hosts only the VFS server by
-placing the following <config> node inside the <runtime> node of the
-_pkg/unix/runtime_ file:
+replacing our empty <config/> in our _pkg/unix/runtime_ file by the
+following configuration.
 
 ! <config>
 !   <parent-provides>
@@ -172,11 +198,12 @@ the root of the virtual file system in a read-only fashion.
 
 When trying to 'run' the scenario now, we see a bunch of messages:
 
-! $ goa run
-! ... config <parent-provides> mentions a timer service;
-!     consider adding <timer/> as a required runtime service
-! Genode 20.11-251-g676fd7d884a <local changes>
-! 17592186044415 MiB RAM and 8997 caps assigned to init
+! unix$ goa run
+
+! [unix] config <parent-provides> mentions a timer service;
+!        consider adding <timer/> as a required runtime service
+! Genode sculpt-23.10
+! 17592186044415 MiB RAM and 18997 caps assigned to init
 ! [init -> unix] Error: vfs: environment ROM session denied ...
 
 The first message points out that init's '<parent-provides>' declaration
@@ -194,8 +221,10 @@ inside the '<runtime>' node.
 
 The subsequent "Error:" messages tell us that init requested the ROM module
 'vfs' that is not available to the scenario, yet.
-To make both ingredients available to our scenario, we have to
-declare them in the _archives_ and as <content> in the _runtime_ file.
+To make this ingredient available to our scenario, we have to
+declare it in the _archives_ and as <content> in the _runtime_ file.
+While we are at it, lets also capture the need for 'init' because our entire
+scenario is based on this component.
 Let's add the following lines to _pkg/unix/archive_:
 
 ! genodelabs/src/vfs
@@ -205,8 +234,8 @@ Also make sure to have the ROM modules listed as <content> in the
 _pkg/unix/runtime_ so that it looks as follows:
 
 ! <content>
-!   <rom label="bash.tar"/>
 !   <rom label="init"/>
+!   <rom label="bash.tar"/>
 !   <rom label="vfs"/>
 ! </content>
 
@@ -225,19 +254,20 @@ _archives_ file. So we can resolve this error by adding a corresponding <rom>
 entry to the _runtime_ file. The <content> should now look as follows:
 
 ! <content>
-!   <rom label="bash.tar"/>
 !   <rom label="init"/>
+!   <rom label="bash.tar"/>
 !   <rom label="vfs"/>
 !   <rom label="vfs.lib.so"/>
 ! </content>
 
 When running the scenario again, we see a sign of hope:
 
-! goa run
-! Genode 23.02-146-g4bb4e60d8b0 <local changes>
+! unix$ goa run
+
+! Genode sculpt-23.10
 ! 17592186044415 MiB RAM and 18997 caps assigned to init
 
-Not further errors! That means that the VFS server is running and has
+No further errors! That means that the VFS server is running and has
 presumably mounted the _bash.tar_ archive. On a second terminal, you can
 indeed observe the VFS server showing up.
 
@@ -276,9 +306,9 @@ get a little bit more action on screen, you may add the 'verbose="yes"'
 attribute to init's <config> node. Another try of 'goa run' reveals the
 following output.
 
-! $ goa run
+! unix$ goa run
 
-! Genode 23.02-146-g4bb4e60d8b0 <local changes>
+! Genode sculpt-23.10
 ! 17592186044415 MiB RAM and 18997 caps assigned to init
 ! [init -> unix] parent provides
 ! [init -> unix]   service "ROM"
@@ -381,7 +411,7 @@ following output:
 ! [init -> unix] child "/bin/bash" exited with exit value 0
 
 The message "files at /dev: /dev/log /dev/null"
-is the output of bash command we have hoped for!
+is the output of the bash command we have hoped for!
 
 Granted, our scenario is still a far cry from being a Unix system.
 In the next episode, we will add an interactive terminal.
@@ -390,3 +420,5 @@ In the next episode, we will add an interactive terminal.
 _Edit (2021-03-02): updated to Genode 21.02_
 
 _Edit (2023-05-02): updated to Sculpt OS 23.04_
+
+_Edit (2023-11-15): updated to Sculpt OS 23.10_

@@ -134,9 +134,26 @@ This includes a pseudo graphics driver, a pseudo input driver, and the
 [https://github.com/genodelabs/genode/tree/master/repos/os/src/server/nitpicker - nitpicker GUI server].
 
 Let's try 'goa run' after having added the <requires> definition to our
-_runtime_. We can see that Goa automatically downloads the basic components of
-the GUI stack. Not only that. When starting the scenario, a new window
-with a greenish background pops up. When hovering the mouse over the window,
+_runtime_. Goa responds with the following message:
+
+! [unix] Error: runtime requires <gui/>,
+!               which is not mentioned in <parent-provides>
+
+It points out the fact that the runtime file pretends to require a <gui>
+service but according to init configuration in _unix.config_ no such
+service is actually obtained from he parent. So either the <requires>
+definition is superfluous or the init configuration is wrong or incomplete.
+So satisfy this sanity check, let's add the following line to the
+<parent-provides> declarations in the _raw/unix.config_ file.
+
+! <parent-provides>
+!   ...
+!   <service name="Gui"/>
+! </parent-provides>
+
+Upon the next 'goa run', we can see that Goa automatically downloads the
+basic components of the GUI stack. Not only that. When starting the scenario,
+a new window with a greenish background pops up. When hovering the mouse over the window,
 you can see a small mouse pointer. If you are curious how the system the
 GUI stack is assembled in detail, please have a look at _var/run/config_.
 But from the perspective of our Unix scenario, these exact details are not
@@ -186,10 +203,12 @@ The following two lines must be added to the runtime file's <content>:
 ! </content>
 
 When trying 'goa run' again, we see that we exchanged the previous errors
-with two new ones. Let's call it progress:
+with a new one. Let's call it progress:
 
-! [init -> unix -> terminal] Error: ROM-session creation failed (label="config" ...)
-! ...
+! [unix] Error: Unable to find content ROM module 'terminal.config'.
+
+!  You either need to add it to the 'raw/' directory 
+!  or add the corresponding dependency to the 'archives' file.
 
 The error is easy to explain. We have configured the "terminal"
 start node to fetch its configuration from a ROM called _terminal.config_
@@ -262,34 +281,9 @@ The following lines must be added to the <content> node in _pkg/unix/runtime_
 !   <rom label="vfs_ttf.lib.so"/>
 ! </content>
 
-Good news! On the next try of 'goa run', we can see the error gone.
-However, as so often, the good news are accompanied with less good news, as
-seen in the log:
-
-! [init -> unix] Warning: terminal: no route to service "Gui" (...)
-! [init -> unix -> terminal] Error: Gui-session creation failed (...)
-
-It tells us that there is no way for the "terminal" to reach a
-"Gui" service. Let's take a look at the <route> rules for this component:
-
-! <route> <any-service> <parent/> </any-service> </route>
-
-This rule says that all service requests should directly go towards the
-surrounding Genode system, towards the parent of the component tree.
-However, in the <parent-provides> declaration at the beginning of the
-init <config> a "Gui" service is nowhere to be found. Hence, init
-refuses to ask the outside world for a "Gui" service on behalf of
-its child terminal. Let us enhance the <parent-provides> node with an entry
-for the GUI service:
-
-! <parent-provides>
-!   ...
-!   <service name="Gui"/>
-! </parent-provides>
-
-Now, when trying 'goa run' for the next time, we see that the complaint about
-the "Gui" service has vanished.
-We see the black screen and the log output of '/bin/bash' looks as usual.
+Good news! On the next try of 'goa run', we can see the error gone and are
+greeted with a black screen instead.
+The log output of '/bin/bash' looks as usual.
 
 
 Connecting bash with the terminal
@@ -389,3 +383,5 @@ The 'ls' command is a separate Unix command that is not yet part of our
 scenario. It is covered by the [https:2019-12-22-goa-unix-pipes - next episode...]
 
 _Edit (2023-05-02): updated to Sculpt OS 23.04_
+
+_Edit (2023-11-15): updated to Sculpt OS 23.10_

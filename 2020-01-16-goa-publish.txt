@@ -172,16 +172,17 @@ To publish the depot content for a given Goa project, first change to the
 project directory. For example, within the 'goa-playground' repository linked
 above, I'd change to the 'unix_3rd' directory.
 
-! git clone https://github.com/nfeske/goa-playground.git
-! cd goa-playground/intro/unix_3rd/
+! $ git clone https://github.com/nfeske/goa-playground.git
+
+! $ cd goa-playground/intro/unix_3rd/
 
 Before proceeding, please make sure to use the latest version of the Goa tool.
 
-! goa update-goa
+! $ goa update-goa
 
 It is always a good idea to give the project a quick try before publishing it.
 
-! goa run
+! $ goa run
 
 Goa will download all the components needed to build the scenario, and execute
 it directly on the GNU/Linux development machine. You should see the terminal
@@ -192,14 +193,15 @@ When peeking at the _var/public/_ directory now, we see the downloaded
 archives and signatures. For example,
 
 ! $ find var/public/genodelabs/bin/x86_64/terminal
-! var/public/genodelabs/bin/x86_64/terminal
-! var/public/genodelabs/bin/x86_64/terminal/2023-04-25.tar.xz.sig
-! var/public/genodelabs/bin/x86_64/terminal/2023-04-25.tar.xz
 
-The 'sig' file is the signature that I (Norman) created via my private PGP
-key when I originally published the terminal. After downloading, Goa verifies
-the signature using Genode Labs' public key that is provided at
-_var/depot/genodelabs/pubkey_.
+! var/public/genodelabs/bin/x86_64/terminal
+! var/public/genodelabs/bin/x86_64/terminal/2023-10-24.tar.xz.sig
+! var/public/genodelabs/bin/x86_64/terminal/2023-10-24.tar.xz
+
+The 'sig' file is the signature that was created via the private PGP
+key of Genode Labs when terminal was originally published.
+After downloading, Goa verifies the signature using Genode Labs' public key
+that is provided at _var/depot/genodelabs/pubkey_.
 
 When taking a look at the _var/depot/_ directory, we see the depot
 content extracted from the corresponding 'tar.xz' archives.
@@ -215,6 +217,7 @@ To create depot content for _our_ project, Goa features the 'goa export'
 command. Let's give it a try without a second thought.
 
 ! $ goa export
+
 ! Error: missing definition of depot user
 !
 !  You can define your depot user name by setting the 'depot_user' 
@@ -227,6 +230,7 @@ within the depot that will host our content. Let us try the command again,
 but specifying the user name "john" this time.
 
 ! $ goa export --depot-user john
+
 ! Error: version for archive john/raw/unix_3rd undefined
 !
 !  Create a 'version' file in your project directory, or 
@@ -241,18 +245,20 @@ anything fancy like whitespace. It is generally a good practice to just use
 the current date. Hence, we write the version identifier into a new file
 called _version_:
 
-! $ echo 2023-05-02 > version
+! $ echo 2023-11-15 > version
 
 Let's give 'goa export' another try.
 
 ! $ goa export --depot-user john
-! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2023-05-02
+
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2023-11-15
 ! Error: missing README file at pkg/unix_3rd/README
 
 This looks like a partial success! When inspecting _var/depot/_ now, we
 can indeed find content that looks pretty familiar.
 
-! $ ls var/depot/john/raw/unix_3rd/2023-05-02/
+! $ ls var/depot/john/raw/unix_3rd/2023-11-15/
+
 ! terminal.config  unix.config  vimrc
 
 However, let's pay attention to the 'Error:' part of the message. By
@@ -281,26 +287,27 @@ exported already. So we are safe to specify the '--depot-overwrite' argument
 as suggested by Goa.
 
 ! $ goa export --depot-user john --depot-overwrite
-! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2023-05-02
-! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2023-05-02
+
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2023-11-15
+! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2023-11-15
 
 This time, the command succeeded. To celebrate the success, review the
-content of our part our - john's part - of the depot.
+content of our part - john's part - of the depot.
 
 ! $ find var/depot/john/
 ! var/depot/john/
 ! var/depot/john/raw
 ! var/depot/john/raw/unix_3rd
-! var/depot/john/raw/unix_3rd/2023-05-02
-! var/depot/john/raw/unix_3rd/2023-05-02/terminal.config
-! var/depot/john/raw/unix_3rd/2023-05-02/vimrc
-! var/depot/john/raw/unix_3rd/2023-05-02/unix.config
+! var/depot/john/raw/unix_3rd/2023-11-15
+! var/depot/john/raw/unix_3rd/2023-11-15/terminal.config
+! var/depot/john/raw/unix_3rd/2023-11-15/vimrc
+! var/depot/john/raw/unix_3rd/2023-11-15/unix.config
 ! var/depot/john/pkg
 ! var/depot/john/pkg/unix_3rd
-! var/depot/john/pkg/unix_3rd/2023-05-02
-! var/depot/john/pkg/unix_3rd/2023-05-02/archives
-! var/depot/john/pkg/unix_3rd/2023-05-02/runtime
-! var/depot/john/pkg/unix_3rd/2023-05-02/README
+! var/depot/john/pkg/unix_3rd/2023-11-15
+! var/depot/john/pkg/unix_3rd/2023-11-15/archives
+! var/depot/john/pkg/unix_3rd/2023-11-15/runtime
+! var/depot/john/pkg/unix_3rd/2023-11-15/README
 
 You can nicely see here how the _version_ file defines the name of the
 subdirectory of the content.
@@ -317,8 +324,9 @@ This command implicitly executes the 'goa export' command. So we need to
 specify all information that we supplied to 'export'.
 
 ! $ goa publish --depot-user john --depot-overwrite
-! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2023-05-02
-! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2023-05-02
+
+! [unix_3rd] exported .../unix_3rd/var/depot/john/raw/unix_3rd/2023-11-15
+! [unix_3rd] exported .../unix_3rd/var/depot/john/pkg/unix_3rd/2023-11-15
 ! Error: missing public key at .../unix_3rd/var/depot/john/pubkey
 !
 !  You may use the 'goa add-depot-user' command. 
@@ -336,7 +344,7 @@ article. The 'goa add-depot-user' command closes the circle.
 !                           --depot-overwrite
 
 The URL specified as '--depot-url' argument should point to the designated
-location of the archives on your web server. For reference, my (Norman's)
+location of the archives on your web server. For reference, Genode Labs'
 depot URL is [https://depot.genode.org/]. Note that the URL points to the
 root of the depot directory structure, not the depot user's sub directory.
 
@@ -350,6 +358,7 @@ the content we just created with the 'goa export' command. It is interesting
 to take a look at the content of the depot user "john" now.
 
 ! $ find var/depot/john/
+
 ! var/depot/john/
 ! var/depot/john/pubkey
 ! var/depot/john/download
@@ -366,8 +375,8 @@ let us give Goa another chance to publish the project.
 
 This time, Goa is able to proceed, as indicated by the following messages:
 
-! publish .../var/public/john/pkg/unix_3rd/2023-05-02.tar.xz
-! publish .../var/public/john/raw/unix_3rd/2023-05-02.tar.xz
+! publish .../var/public/john/pkg/unix_3rd/2023-11-15.tar.xz
+! publish .../var/public/john/raw/unix_3rd/2023-11-15.tar.xz
 
 We are also asked by GPG for our passphrase for decrypting our private key.
 We obey.
@@ -376,15 +385,16 @@ Once the command completed, we can find the archived and signed depot content
 at _var/public/john/:_
 
 ! $ find var/public/john
+
 ! var/public/john
 ! var/public/john/raw
 ! var/public/john/raw/unix_3rd
-! var/public/john/raw/unix_3rd/2023-05-02.tar.xz.sig
-! var/public/john/raw/unix_3rd/2023-05-02.tar.xz
+! var/public/john/raw/unix_3rd/2023-11-15.tar.xz.sig
+! var/public/john/raw/unix_3rd/2023-11-15.tar.xz
 ! var/public/john/pkg
 ! var/public/john/pkg/unix_3rd
-! var/public/john/pkg/unix_3rd/2023-05-02.tar.xz.sig
-! var/public/john/pkg/unix_3rd/2023-05-02.tar.xz
+! var/public/john/pkg/unix_3rd/2023-11-15.tar.xz.sig
+! var/public/john/pkg/unix_3rd/2023-11-15.tar.xz
 
 
 Syncing the public depot content to the web server
@@ -412,3 +422,5 @@ Sculpt OS.
 _Edit (2021-03-03): updated to Genode 21.02_
 
 _Edit (2023-05-02): updated to Sculpt OS 23.04_
+
+_Edit (2023-11-15): updated to Sculpt OS 23.10_

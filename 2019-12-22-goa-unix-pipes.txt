@@ -40,7 +40,7 @@ Analogous to the bash package, described in the
 there is a single TAR archive containing all the files that comprise the
 coreutils installation.
 
-! $ tar tf var/depot/genodelabs/bin/x86_64/coreutils/2023-02-26/coreutils.tar
+! unix$ tar tf var/depot/genodelabs/bin/x86_64/coreutils/2023-10-24/coreutils.tar
 ! ./
 ! ./lib/
 ! ...
@@ -315,3 +315,4 @@ _Edit (2021-03-02): updated to Genode 21.02_
 
 _Edit (2023-05-02): updated to Sculpt OS 23.04_
 
+_Edit (2023-11-15): updated to Sculpt OS 23.10_
