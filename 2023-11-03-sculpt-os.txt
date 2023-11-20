@@ -105,7 +105,7 @@ the middle and right mouse buttons by filtering the PS/2 input as follows:
 !   <key name="KEY_RIGHTCTRL" to="BTN_RIGHT"/>
 ! </remap>
 This looks a little bit like a hack. And it is. But it gets me through the day.
-Down the road, we will equip Sculpt with a proper touchscreen driver,
+Down the road, we will equip Sculpt with a proper touchpad driver,
 eliminating the need for any PS/2 emulation. If you are eager to test-drive a
 prototype, you can give the Sculpt image 2023-11-03 offered by chelmuth a try
 and turn off the PS/2 emulation in the BIOS.
