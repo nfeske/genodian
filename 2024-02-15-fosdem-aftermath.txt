@@ -1,0 +1,115 @@
+
+                           FOSDEM 2024 aftermath
+
+
+This year's FOSDEM was once again an eventful experience. By now,
+most presentations have become available. Yet I took the opportunity to
+re-record a more complete version of my talk that I want to share with
+you.
+
+With [https://genodians.org/skalk - Stefan],
+[https://genodians.org/jschlatow - Johannes],
+[https://genodians.org/atopia - Ben], and me, a delegation of four Genodians
+attended FOSDEM this year. We prepared to participate in two developer rooms
+in particular. Johannes introduced our
+[https://fosdem.org/2024/schedule/event/fosdem-2024-3089-streamlining-application-development-for-genode-with-goa - Goa SDK]
+at the [https://fosdem.org/2024/schedule/track/microkernel/ - microkernel]
+developer room whereas I presented our recent
+[https://fosdem.org/2024/schedule/event/fosdem-2024-3017-genode-on-the-pinephone-on-track-to-real-world-usability/ - mobile-phone line of work]
+at the [https://fosdem.org/2024/schedule/track/foss-on-mobile-devices/ - FOSS-on-mobile] developer room.
+
+FOSS-on-mobile developer room
+-----------------------------
+
+Unfortunately, both developer rooms took place simultaneously during Saturday. So
+I could attend only half of each session. I found the variety of topics presented at the
+FOSS-on-mobile room simply delightful. For me personally, the
+presentations of
+[https://fosdem.org/2024/schedule/event/fosdem-2024-1716-u-boot-for-modern-qualcomm-phones/ - U-Boot for modern Qualcomm phones] and
+[https://fosdem.org/2024/schedule/event/fosdem-2024-3200-universal-serial-bug-a-tale-of-spontaneous-modem-resets/ - The Universal Serial Bug]
+stood out the most. I wish I had seen the excellent lecture
+[https://fosdem.org/2024/schedule/event/fosdem-2024-2234-from-phone-hardware-to-mobile-linux/ - From phone hardware to mobile Linux]
+before I started my work with the PinePhone.
+Regarding my own talk about
+[https://fosdem.org/2024/schedule/event/fosdem-2024-3017-genode-on-the-pinephone-on-track-to-real-world-usability/ - Genode on the PinePhone on track to real-world usability],
+I was apparently bit overly ambitious with the breadth of topics I wanted to
+cover, running out of time. Of the three demos I had prepared, I could show only one.
+
+Earlier this week, I took the opportunity to re-record (a slightly extended
+version of) the talk that gives more room to the background story and features
+all demos as intended.
+
+: <video controls width="720">
+:   <source src="https://genode.org/files/mobile_sculpt_fosdem_2024.mp4" type="video/mp4" />
+:   <a href="https://genode.org/files/mobile_sculpt_fosdem_2024.mp4">Download as mp4</a>
+: </video>
+
+Microkernel developer room
+--------------------------
+
+During the second half of the day, I attended the
+[https://fosdem.org/2024/schedule/track/microkernel/ - microkernel] developer
+room.
+Watching Udo Steinberg presenting his work on NOVA is always a feat, and this year's talk
+[https://fosdem.org/2024/schedule/event/fosdem-2024-3227-using-the-nova-microhypervisor-for-trusted-computing-at-scale/ - Using the NOVA Microhypervisor for Trusted Computing at Scale]
+is no exception.
+It goes without saying that I was very much looking forward to Johannes'
+presentation about
+[https://fosdem.org/2024/schedule/event/fosdem-2024-3089-streamlining-application-development-for-genode-with-goa/ - Streamlining application development for Genode with Goa].
+
+I must admit that I found the slew of unikernel-specific talks in the microkernel
+developer room a bit irritating.
+That might be strange as I vividly remember finding much joy in Antti Kantee's talk on
+[https://archive.fosdem.org/2014/schedule/event/01_uk_rump_kernels/ - Rump Kernels, Just Components],
+in 2014 or Martin Lucina's talk on the
+[https://archive.fosdem.org/2019/schedule/event/solo5_unikernels/ - Solo5 unikernel]
+in 2019, both of which spawned curiosity and synergetic effects with the
+microkernel community.
+This time, however, I completely failed to draw the
+connection between the presented unikernel projects and the microkernel world.
+Whereas microkernel architectures are all about the separation of concerns,
+unikernels are all about removing means of separation. The common ground
+seems to come down to a few low-level programming tidbits.
+I'm aware that the words above may come across as dismissive. That's not my
+intention as each of the projects is clearly an affair of heart
+and has technical merits. They just happen to be neither component-based operating
+systems nor microkernel-related.
+
+Granted, the schedule of each devroom ultimately depends on the submissions. Hence, the
+best way to reestablish the clear focus of the microkernel devroom would be
+for open-source microkernel projects to submit strong submissions next time.
+
+Sunday highlights
+-----------------
+
+On Sunday, I enjoyed strolling around, mostly around the K building.
+In a through and through entertaining way, Daniel Stenberg claimed
+[https://fosdem.org/2024/schedule/event/fosdem-2024-1931-you-too-could-have-made-curl-/ - You too could have made curl!]
+Another highlight was certainly Neal Walfield's talk about
+[https://fosdem.org/2024/schedule/event/fosdem-2024-3297-sequoia-pgp-rethinking-openpgp-tooling/ - Sequoia PGP],
+which gives me the cosy feeling that the best days of OpenPGP are still ahead of us.
+
+FOSDEM is packed with so many people that deeply care about the shared values
+of Free Software and Open Source and their respective projects.
+As one particularly encounter to remember, I had the pleasure of demoing
+Sculpt OS on the PinePhone and handing over a copy of my
+[https://genode.org/documentation/genode-platforms-23-05.pdf - Genode Platforms]
+book - which is essentially a book about the PinePhone - to the people behind
+the PinePhone. The warm and enthusiastic response of Lukasz and Tl caught
+me totally by surprise.
+
+What other things to remember?
+------------------------------
+
+[https://genodians.org/atopia/index - Ben] had an excellent hand in restaurant
+choices, like [https://www.beiruti.eu/ - this one].
+Remember, when on the road, it's good to have a Ben with you!
+
+I want to be a fan of Deutsche Bahn, and I really mean it. But this year's
+travel from Dresden to Brussels was the worst train ride I ever experienced.
+People complimented out of overcrowded ICE trains? Check. Two hours standing
+just besides the train toilet, inhaling fumes of varying intensity? Check.
+Medical emergency stop? Check. Hours upon hours of delay? Check. On the bright
+side, the travel back from Brussels to Dresden was the smoothest ride
+imaginable. Chances are fifty-fifty.
+
