@@ -260,3 +260,4 @@ _work with the PinePhone!_
 _Thanks to Christian Helmuth and Johannes Schlatow for their assistance with_
 _figuring out how to fastboot FIT images!_
 
+| armv8 pinephone uboot tooling

@@ -257,3 +257,5 @@ It goes without saying that an application's clipboard ROM session (for
 obtaining clipboard content) and its report session (for posting clipboard
 content) could be routed to even different components, which might not merely
 transport the content but may parse, filter, or translate it.
+
+| security sculpt gui

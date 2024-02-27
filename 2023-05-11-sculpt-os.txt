@@ -207,3 +207,5 @@ to the specific device at hand.
 For Sculpt OS 23.04, we updated all Linux-based drivers to the recent kernel
 version 6.1.20. So Sculpt users benefit from the enormous efforts of the Linux
 kernel community targeting modern hardware.
+
+| pinephone mobile sculpt announcement

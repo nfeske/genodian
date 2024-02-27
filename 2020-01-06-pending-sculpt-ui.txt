@@ -143,3 +143,4 @@ There are still a view open questions:
 Please do not hesitate to tell me what you think of those changes.
 But I'm not overly cautious. It is an exploration. We can iterate.
 
+| gui sculpt planning

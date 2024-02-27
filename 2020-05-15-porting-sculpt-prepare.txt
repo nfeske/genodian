@@ -267,3 +267,4 @@ For further inspiration,
 you may enjoy Tomasz' [http://genodians.org/tomga/2019-08-13-rpi-automation - article]
 about automating his Raspberry-Pi development workflow.
 
+| sculpt tutorial

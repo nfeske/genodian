@@ -553,3 +553,4 @@ pressed. Long story short, with this wiring in place, the power button can
 be observed via GPIO H8. The GPIO pin B2 can be connected to an LED as
 we did for the test/pin_control example described in the previous article.
 
+| platform architecture driver tutorial

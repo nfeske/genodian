@@ -24,3 +24,5 @@ for installing the image on a USB stick and for the concepts of Sculpt OS.
 
 _Update: The recording of the demo can be_
 _found [https://fosdem.org/2020/schedule/event/uk_sculpt/ - here]._
+
+| fosdem sculpt announcement

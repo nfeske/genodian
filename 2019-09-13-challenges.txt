@@ -151,3 +151,4 @@ Do you have further ideas about future research or development topics
 around Genode that you like to see listed? Please don't hesitate to get in
 touch by commenting on Reddit at /r/genode or posting to Genode's mailing list.
 
+| planning

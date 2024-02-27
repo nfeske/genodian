@@ -362,3 +362,5 @@ of _util/string.h_ makes our binary 50 KiB fatter.
 Given those numbers, there is clearly potential for further optimization in
 the areas of string processing, XML parsing, and XML generating.
 But I'm leaving this side track for now.
+
+| c++ debugging profiling

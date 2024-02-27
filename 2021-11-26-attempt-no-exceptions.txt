@@ -166,3 +166,5 @@ This positive experience makes me question the use of the C++ exception
 mechanism in Genode at large. The 'Attempt' pattern is not merely a viable
 alternative, it makes our code more robust and easier to reason about. For the
 longer term I cannot resist the question: Should we attempt going all in?
+
+| c++

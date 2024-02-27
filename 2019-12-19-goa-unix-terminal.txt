@@ -385,3 +385,5 @@ scenario. It is covered by the [https:2019-12-22-goa-unix-pipes - next episode..
 _Edit (2023-05-02): updated to Sculpt OS 23.04_
 
 _Edit (2023-11-15): updated to Sculpt OS 23.10_
+
+| goa tutorial

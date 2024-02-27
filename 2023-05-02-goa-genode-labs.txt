@@ -56,3 +56,5 @@ The following notes are worth sharing.
   [https://genodians.org/nfeske/2019-12-22-goa-unix-pipes - 3],
   [https://genodians.org/nfeske/2020-01-16-goa-publish - 4]) to
   the current version.
+
+| goa announcement

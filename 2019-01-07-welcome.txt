@@ -40,3 +40,4 @@ Please also consider the README file at
 rules, and an easy way to test-drive the appearance of your postings locally
 on your machine.
 
+| about

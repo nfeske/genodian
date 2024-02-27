@@ -960,3 +960,4 @@ of Genode's C++ runtime. We don't feel like living in a cave any longer.
 Finally, we got a meaningful error message, which is an unmistakable direction
 sign for [https:2021-02-11-pine-fun-debugging - our next steps].
 
+| armv8 pinephone kernel hw build-system uboot debugging tutorial

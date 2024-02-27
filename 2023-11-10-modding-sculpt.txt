@@ -497,3 +497,5 @@ You can go down even to the kernel level:
 ! build: lib/ld core
 
 Happy hacking!
+
+| gui sculpt tutorial

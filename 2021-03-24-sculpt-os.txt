@@ -184,3 +184,4 @@ improvements under the hood.
 
 I wish you a lot of fun with the new version of Sculpt OS!
 
+| sculpt architecture announcement

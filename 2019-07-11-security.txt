@@ -276,3 +276,4 @@ For any compartment, one may investigate the following questions:
 
 _Security becomes quantifyable._ That is what we mean when speaking of security.
 
+| security architecture

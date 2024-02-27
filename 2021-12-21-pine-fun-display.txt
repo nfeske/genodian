@@ -297,3 +297,4 @@ For reference, the entire commit for the monolithic framebuffer driver can
 be found
 [https://github.com/genodelabs/genode-allwinner/commit/c1d088ef5d9d4c82ffa761f672c33f70431dec31 - here].
 
+| pinephone driver linux tutorial

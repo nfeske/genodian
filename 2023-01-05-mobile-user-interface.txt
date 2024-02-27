@@ -243,3 +243,4 @@ round of tests. For those eager to participate, please consider joining or
 monitoring Genode's [https://genode.org/community/mailing-lists - mailing list]
 for the announcement.
 
+| pinephone gui mobile sculpt architecture

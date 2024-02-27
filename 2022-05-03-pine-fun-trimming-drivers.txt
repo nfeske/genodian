@@ -407,3 +407,4 @@ the platform driver. Isn't it beautiful?
 [image reconciled_fb_touch]
 
 
+| pinephone architecture debugging tutorial

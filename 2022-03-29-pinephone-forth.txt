@@ -430,3 +430,4 @@ let's SCP spin until two POGO pins of the PinePhone are connected. This way,
 the PinePhone can be used as usual - using any OS - while making the SCP
 command prompt appear when told so by a paperclip.
 
+| pinephone forth openrisc scp

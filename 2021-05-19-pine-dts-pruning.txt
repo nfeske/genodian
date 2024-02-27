@@ -161,3 +161,5 @@ device-tree information.
 In the next episode, the pruned device tree will make an appearance during
 the quest of porting the emac Linux driver to Genode.
 [https://genodians.org/nfeske/2021-09-03-pine-fun-networking - Read on ...]
+
+| linux tooling

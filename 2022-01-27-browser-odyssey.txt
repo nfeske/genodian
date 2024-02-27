@@ -589,3 +589,4 @@ the Wireguard VPN solution with Genode.
 
 Have I mentioned that Wireguard is featured on our road map for this year?
 
+| pinephone browser chromium firefox sculpt

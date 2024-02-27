@@ -408,3 +408,4 @@ our upcoming kernel's UART driver. With this primitive way to get information
 out of the board, we can turn our attention to the kernel-porting work, which
 is the topic of the [https:2021-01-28-pine-fun-kernel-skeleton - next article ...]
 
+| pinephone debugging arm armv8 uboot tutorial

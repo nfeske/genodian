@@ -144,3 +144,4 @@ across runs, it is advisable to discharge such preemptions entirely. The
 easiest way is setting the default time slice to a large value,
 [https://github.com/nfeske/genode/commit/caab614117eb944cd57c763b3795cdc004255c4b - like 90 seconds].
 
+| c++ profiling

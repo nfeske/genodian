@@ -196,3 +196,4 @@ code of the
 component. With about 160 source lines (sloccount), it is reasonably small
 while doing meaningful work.
 
+| c++

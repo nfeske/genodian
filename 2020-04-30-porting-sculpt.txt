@@ -227,3 +227,4 @@ Bluetooth. But once a bare-bones Sculpt system is ready to run, further device
 drivers can be developed as regular components independent from each other,
 which is the beauty of a component-based operating system like Sculpt OS.
 
+| sculpt planning

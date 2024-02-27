@@ -319,3 +319,4 @@ During iterative development, it is recommended to use the 'run/sculpt_test'
 script using
 [https://genodians.org/nfeske/2021-09-20-pine-fun-pinephone-boot - fastboot].
 
+| fosdem pinephone gui mobile sculpt announcement

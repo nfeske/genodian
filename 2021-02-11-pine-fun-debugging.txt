@@ -316,3 +316,4 @@ quite far without using a debugger. We have gathered a lot of input for
 investigating the error. Our next job will be using this information to
 discharge it. [https:2021-02-18-pine-fun-user-land - Read on ...]
 
+| debugging pinephone kernel tutorial

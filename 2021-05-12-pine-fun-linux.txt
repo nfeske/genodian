@@ -766,3 +766,4 @@ from within Genode's build directory via:
 
 ! build/arm_v8a$ make a64_linux
 
+| armv8 pinephone linux uboot tutorial

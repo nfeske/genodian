@@ -171,3 +171,4 @@ For the curious, Stefan also happens to provide a preset for running the Debian
 installer in a VM. However, as he told me, this preset is merely an
 experimentation ground today.
 
+| pinephone sculpt intel mntreform announcement

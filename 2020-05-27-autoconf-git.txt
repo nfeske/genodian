@@ -212,3 +212,4 @@ For productive use of Git, at least two problems wait to be solved.
 These remaining issues notwithstanding, I'm already quite happy of how smooth
 the porting work for such a non-trivial piece of software went.
 
+| goa

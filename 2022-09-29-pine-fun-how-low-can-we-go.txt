@@ -324,3 +324,5 @@ That said, thanks to our series of experiments, we gained a clear picture of
 the various contributors to the overall power consumption and the
 power-scaling capabilities of the hardware. We found impressive room
 for creativity that calls for exploration.
+
+| pinephone energy profiling

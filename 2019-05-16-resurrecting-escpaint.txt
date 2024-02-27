@@ -280,3 +280,4 @@ Besides Hatari, I plan to condense the reusable parts of the findings above
 into a little CMake wrapper tool so that other CMake projects can be ported to
 Genode more easily.
 
+| sculpt atari

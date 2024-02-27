@@ -63,3 +63,4 @@ won't work. The Goa playground repository has been updated in this regard.
   [https://github.com/nfeske/goa-playground/commits/master]
 
 
+| goa announcement

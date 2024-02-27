@@ -648,3 +648,4 @@ The [https:2021-03-17-pine-fun-device-access - next article] of the series
 goes into the details of accessing peripheral devices from user-level
 components.
 
+| armv8 pinephone packages debugging tutorial

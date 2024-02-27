@@ -303,4 +303,4 @@ automatically appear at _/recall/window_layouter/recall/rules_. If using a
 persistent file system (as opposed to the RAM file system), the rules - and
 thereby the window layout - will be preserved across reboots.
 
-
+| gui sculpt architecture tutorial

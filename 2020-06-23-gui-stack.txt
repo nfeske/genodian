@@ -190,3 +190,4 @@ Even though I strive for replacing the input session interface by the new
 event session interface, the scope of the task of reworking the input drivers
 is not yet completely tangible to me.
 
+| gui sculpt architecture planning

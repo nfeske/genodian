@@ -182,3 +182,4 @@ perspective, this SoC family is the most attractive. Hence, when working
 on Genode's 64-bit ARM support, or device drivers, or ARM virtualization,
 we'll keep our focus on the i.MX series.
 
+| arm planning

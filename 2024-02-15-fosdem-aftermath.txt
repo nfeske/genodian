@@ -113,3 +113,4 @@ Medical emergency stop? Check. Hours upon hours of delay? Check. On the bright
 side, the travel back from Brussels to Dresden was the smoothest ride
 imaginable. Chances are fifty-fifty.
 
+| fosdem pinephone energy mobile sculpt
