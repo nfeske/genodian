@@ -1,0 +1,219 @@
+
+                    What's new in Sculpt OS 24.04
+
+Sculpt OS 24.04 is packed. The spectrum of topics ranges from user experience,
+over audio, USB, suspend/resume, on-target debugging, and goes on. In the
+article, I'm presenting my personal highlights of this most profound release
+so far, garnished with various bits and pieces of the updated documentation.
+
+[image sculpt_24_04]
+
+:Official announcement:
+
+  [https://genode.org/news/sculpt-os-release-24.04]
+
+:Sculpt download page:
+
+  [https://genode.org/download/sculpt]
+
+:Up-to-date documentation:
+
+  [https://genode.org/documentation/articles/sculpt-24-04]
+
+
+Officially supported hardware
+-----------------------------
+
+Sculpt OS 24.04 has been simultaneously released for Intel PCs, the
+[https://mntre.com/ - MNT Reform laptop] (based on i.MX8MQ), and the PinePhone.
+The PC version supports 4K displays out of the box now.
+You can download ready-to-use system images at the following link.
+
+:System images provided by Genode Labs:
+
+  [https://depot.genode.org/genodelabs/image/]
+
+
+User experience
+---------------
+
+At Genode's [https://genode.org/about/road-map - roadmap], we declared "Sculpt
+OS usability" as the main theme of this year. The release comes with long
+anticipated improvements in that department. Its entirely new user interface
+for managing components (the '+' menu) vastly reduces the amount of repetitive
+user interactions. Preconfigured components can now be activated and stopped
+using checkboxes, new software providers can be added on the fly, and the user
+interface has become scrollable.
+
+Seasoned Sculpt users will notice that device-device components have found
+their proper place in the component graph now. One can not only see at a glance
+which drivers were selected to drive the hardware of your machine, but
+you can naturally find the management dialog for your NVMe storage at the
+node of the 'nvme' driver. The same goes for USB and AHCI devices.
+
+[image sculpt_24_04_usb_operations]
+
+
+Audio
+-----
+
+[https://genode.org/documentation/release-notes/24.02#Revised_audio_infrastructure - Genode 24.02]
+introduced a completely new audio stack, supporting pluggable drivers,
+arbitrary sample rates, and the flexible routing of audio signals among
+applications and drivers. Just in time for the release, all of Genode's
+existing audio-supporting applications got adjusted to the new interfaces.
+This includes VirtualBox, the Seoul VMM, the Falkon browser, and SDL-based
+applications.
+Sculpt OS 24.04 makes the new audio facilities conveniently available at the
+options tab of the '+' menu. The central component is the mixer, which
+provides the record and play services to the audio driver(s) and applications.
+
+[image sculpt_24_04_audio_options 40%]
+
+The audio driver is a mere client of the mixer. It can be started and removed
+without interfering with the liveliness of audio applications.
+
+[image sculpt_24_04_mixer_audio 40%]
+
+By default, the mixer keeps the microphone muted and mixes the playback of all
+applications at an equal volume. This policy is defined by the mixer's
+configuration at _/config/launcher/mixer_, which you can find accompanied by
+instructive comments. For example, uncomment the '<play>' nodes referring to
+'mic_left' and 'mic_right' to unmute the mic, or tweak the volume values.
+For tweaking the configuration, it is useful to know the labels of the
+clients. One can obtain this information from the mixer's report at
+_/report/runtime/mixer/state_.
+You can find the mixer configuration described in more detail in its
+[https://github.com/genodelabs/genode/blob/master/repos/os/src/server/record_play_mixer/README - documentation].
+
+Analogously to the mixer, the audio driver can be configured dynamically
+by tweaking the values in _/config/launcher/audio_. For example, you can
+find the master volume for the whole device there.
+
+
+Flexible assignment of USB devices to components
+------------------------------------------------
+
+Sculpt OS has built-in drivers for USB HID devices and USB storage devices,
+which are started automatically if detected. In addition, individual USB
+devices can be assigned to components such as virtual machines, webcam
+drivers, or smartcard drivers. The user-defined rules for assigning USB
+devices to components reside at _/config/usb_. Sculpt combines these rules
+with dynamic built-in rules concerning HID and storage devices into
+_/config/managed/usb_, which is the USB-driver configuration.
+
+The _/config/usb_ file contains a few examples that can be taken as a blueprint.
+The '<policy>' nodes refer to clients of the USB host controller whereas
+the embedded '<device>' nodes represent assignments. The examples take the
+vendor and device IDs of devices as keys for the assignment.
+
+Note that one device may be present in multiple policies, which works well if
+only one of the matching clients is running at a time. It is fine to define
+rules for devices that are not present. As soon as such a device gets plugged
+in, the assignment will take effect. This is useful when repeatedly plugging
+and unplugging the same USB device assigned to a virtual machine.
+
+While defining _/config/usb_ rules, it is helpful to review the currently
+attached devices. This information is available at
+_/report/runtime/usb/devices_.
+
+
+System power control
+--------------------
+
+The new version offers system-power controls like reset, power-down, and standby
+available as an optional feature. On PC hardware, this functionality requires
+ACPI support, which can be enabled as option on the '+' menu.
+
+[image sculpt_24_04_acpi_support 40%]
+
+Once enabled, the "acpi support" component appears and the system menu at the
+upper-left screen corner hosts interactive power controls.
+
+[image sculpt_24_04_system_power 40%]
+
+*Caveats*
+
+As suggested by the names of controls, the reset and power-down operations
+take immediate effect if confirmed. Note that the file-system driver
+synchronizes file modifications every 10 seconds. So take a breath before
+powering down or rebooting your machine.
+
+The standby support is highly experimental. The baseline functionality of
+returning from sleep to an interactively accessible system has been tested on
+machines with mixed yet promising results.
+
+On most machines, the wifi driver is not able to re-initialize the wifi device
+after resume. The Lenovo x260 is a notable exception.
+
+Upon resume, Sculpt OS restarts the USB host-controller driver, which
+implies the restart of all USB clients. E.g., a virtual machine connected
+to USB will be affected. While accessing any USB storage device, the standby
+option is deliberately not presented.
+
+The NVMe, AHCI, and Intel GPU drivers are suspend-resume aware, which means
+that clients of their services are expected to continue operating after
+resuming from standby. The response of the file-system stack to suspend-resume
+cycles is not yet thoroughly tested through.
+
+The audio driver is not automatically restarted during the suspend-resume
+cycle. You may try restarting audio manually.
+
+The limitations will be addressed gradually over time. Feedback about the
+feature on your specific machine is appreciated. Don't hesitate to post your
+experience on the Genode mailing list.
+
+
+Touchpad on Intel Gen11+
+------------------------
+
+Touchpads on recent Intel laptops are integrated as I2C HID devices without
+legacy PS/2 emulation. To support such touchpads, a dedicated driver is
+needed. Even though Sculpt OS has no built-in touchpad driver, it offers
+an I2C HID driver as an option in the '+' menu. Of course, you will need to
+use a USB mouse to initially activate and configure this option.
+
+The driver needs to know a few platform-specific values that must be manually
+configured at _/config/launcher/trackpad_. The configuration is annotated with
+known values for several laptop models. Adjust the configuration by using the
+values matching your hardware and restart the touchpad driver to let the new
+configuration take effect.
+
+
+Tips for updating from Sculpt OS 23.11
+--------------------------------------
+
+Existing Sculpt OS installation can be updated to the new version using
+the built-in system-update dialog. While moving your existing Sculpt
+configurations to the new version, pay attention to the following changes:
+
+* Driver components no longer carry the '_drv' suffix. If you have a
+  custom nic-router configuration, you will need to adjust the labels of
+  the policy nodes for the wifi and nic drivers.
+
+* The event-filter policy nodes refer to drivers hosted in the runtime now.
+  For adjusting the policy nodes, it is best to take the default rules
+  at _/config/managed/event_filter_ as blueprint.
+
+* The blank system-wide event service that allowed clients to submit
+  unfiltered events to the GUI server is no more. Instead, events are
+  always directed to the event filter. To accommodate components like a VNC
+  server that need to inject events, you will have to add a matching
+  event-filter policy.
+
+* Block, USB, and GPU drivers are no longer provided by the base system
+  but by the corresponding drivers hosted in the runtime. So you will have to
+  adjust the routes of your block, USB, and GPU sessions.
+
+
+What's not covered so far
+-------------------------
+
+This tour through Sculpt OS 24.04 ends here. But the list of exciting new
+features goes on. For example, Sculpt just gained the ability of using GDB for
+on-target debugging, including the full comfort of debug symbols! Or as
+another example, the new goa-testbed preset allows developers to use Sculpt OS
+as a remote test target for the Goa SDK. One click on the preset turns your
+computer into a test machine ready for playing ball with Goa! These elaborate
+topics certainly deserve dedicated articles. Keep an eye on genodians.org.
+
