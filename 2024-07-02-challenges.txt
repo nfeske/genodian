@@ -1,0 +1,172 @@
+
+
+                     A couple of new challenges
+
+
+An update to Genode's official list of future challenges has been
+long overdue.
+
+The Genode website features a
+[https://genode.org/about/challenges - collection of topics] that
+we find interesting to pursue. Those topics may draw connections to other
+projects, or leverage a certain aspect of Genode's architecture in an
+interesting way, or may just be pursued out of curiosity.
+
+While reviewing the challenges page earlier this week, I realized that
+several of the listed topics have become stale. The list also misses to
+take the recent opportunities of Sculpt OS into account.
+Before introducing those new topics, let's first briefly revisit those that
+I crossed off the list:
+
+:*COMPLETED* VNC server implementing Genode's framebuffer session interface:
+  Johannes has taken [https://genodians.org/topics-vnc - this idea to Sculpt OS]
+  by now.
+
+:*COMPLETED* Interactive sound switchbox based on Genode's Audio_out session interface:
+  This topic is covered by the audio infrastructure introduced
+  in [https://genode.org/documentation/release-notes/24.02#Revised_audio_infrastructure - Genode 24.02].
+  Audio play and record clients can dynamically appear and disappear at any
+  time while the routing and mixing of audio streams can be changed on the
+  fly. So the idea of the topic has become a regular feature by now.
+
+:*COMPLETED* Go language runtime:
+  In the meantime, a Go runtime has become available at the
+  [https://github.com/genodelabs/genode-world/tree/master/src/test/go_app - world repository].
+  Thanks to tor-m6 for the contribution!
+
+:*COMPLETED* Hardware-accelerated graphics for virtual machines:
+  Genode's port of VirtualBox6 is able use hardware-accelerated graphics
+  via Mesa and Genode's custom GPU multiplexer for Intel GPUs.
+
+:*DROPPED* VirtualBox on top of KVM on Linux:
+  This idea has been realized [https://github.com/cyberus-technology/virtualbox-kvm - elsewhere].
+
+:*DROPPED* Data Plane Development Kit (DPDK):
+  By now, Genode uses the network drivers of the Linux kernel.
+
+:*DROPPED* Sound on the Raspberry Pi:
+  The personal motivation behind this topic - playing SDL-based games - has
+  vanished in the meantime. The kids have outgrown Tuxpaint.
+
+:*DROPPED* Genode on the Librem5 phone hardware:
+  The time window for embracing this hardware as a new Genode target has closed.
+  Given the price and specs of the hardware, this would be too much work for
+  too little gain.
+
+:*DROPPED* Genode on platform Xen/CAmkES/SPARTAN/XNU:
+  The appeal of combining Genode with kernels other than the already supported
+  ones has somewhat diminished with the advent of our custom kernel.
+
+:*DROPPED* Microkernelizing Linux:
+  This novelty has run its course. Even though we are routinely using
+  Genode on Linux as part of our development work flow, it seems wasteful
+  to bend and twist Linux into a microkernel instead of using a microkernel.
+
+:*DROPPED* De-privileging the VESA graphics driver:
+  The VESA driver is playing merely a niche role today.
+
+:*DROPPED* Using Haskell as systems-development language:
+  Whereas the argument holds that a component-based system like Genode
+  may ease the application of higher-level languages for OS-level problems,
+  there is no inherent interest in Haskell among Genode's core developers.
+  In order to not discriminate against other languages like OCamL or Factor,
+  it is probably best to drop the overly specific topic.
+
+
+New topics
+----------
+
+:*ADDED* Port of the Ladybird web browser:
+
+  [https://ladybird.org/ - Ladybird] is a new web browser developed
+  independently from the large browser-engine vendors. It is designed to
+  be light-weight and portable. Among the supported platforms is Qt,
+  which is available for Genode. This makes the porting of Ladybird a
+  tempting application of the Goa SDK.
+
+:*ADDED* Goa SDK running on Sculpt OS:
+
+  Genode's [https://github.com/genodelabs/goa - Goa SDK] is currently used
+  in Linux-based development environments, facilitating cross-compilation
+  to Genode. The goal of this project is the ability to use Goa directly on
+  Sculpt OS without the need for a Linux VM. This entails a number of
+  challenges, ranging from running the Goa tool itself by porting the expect
+  interpreter, over running the Genode tool chain, adjusting the
+  network-facing Goa commands to Genode's environment, to crafting custom
+  support for executing 'goa run' as a sandboxed Genode subsystem.
+
+:*ADDED* Ports of popular software:
+
+  The [https://github.com/genodelabs/goa - Goa SDK] streamlines the process
+  of developing, porting, packaging, and publishing software for Genode,
+  and Sculpt OS in particular.
+  Thanks to the C runtime, the flexible per-component VFS, the standard
+  C++ library, and a variety of supported 3rd-party libraries, porting
+  software to Genode is relatively straight forward.
+  A wish list of software that we'd like to have available on Genode is
+  available at
+  [https://usr.sysret.de/jws/genode/porting_wishlist.html].
+
+:*ADDED* GTK:
+
+  Genode supports Qt as a native toolkit. But many popular applications
+  are built upon [https://www.gtk.org/ - GTK]. A port of GTK to Genode would
+  allow for the use of these applications on Sculpt OS without the need
+  of a Linux VM. A tangible goal for this line of work could be the port
+  of [https://mtpaint.sourceforge.net/ - mtPaint] to Sculpt OS.
+
+:*ADDED* Support for additional ARM SoCs:
+
+  Genode's ARM support has been focused on NXP's i.MX family, Allwinner A64
+  (used by the PinePhone), and to a lesser degree the Raspberry Pi. To make
+  Genode compatible with a larger variety of devices, the support for further
+  chip families calls for exploration. For example,
+  [https://en.wikipedia.org/wiki/Rockchip - Rockchip] SoCs are getting
+  popular in products by open-source hardware vendors such as
+  [https://pine64.com/ - Pine64] and [https://mntre.com/ - MNT].
+  The first steps have been [https://github.com/mickenx/genode-rockchip - already taken]
+  by [https://genodians.org/mickenx/index - Michael Grunditz]!
+  Another example is the Mediatek SoC family, which is popular in
+  affordable consumer smartphones.
+
+  The process of bringing an OS like Genode to a new SoC is full of technical
+  challenges and labor-intensive, yet extremely gratifying.
+  As a guide through this process, the
+  [https://genode.org/documentation/genode-platforms-23-05.pdf - Genode Platforms]
+  book breaks the challenge down to a sequence of manageable steps, where
+  each step can be celebrated as a success.
+
+:*ADDED* Virtual network-boot infrastructure as Sculpt component:
+
+  Network-based development work flows for PCs require a variety of tools and
+  network-configuration peculiarities. Think of a development network with a
+  custom configured DHCP server, a TFTP or HTTP server on the development
+  machine, the provisioning of a PXE boot loader, tooling for obtaining serial
+  output over AMT, or tooling for remote power control via AMT.
+
+  The goal of this project would be the hosting of all those functions in a
+  Sculpt OS component "devnet" that is exclusively in charge of a dedicated
+  LAN port of the developer's Sculpt machine. By connecting a test machine to
+  this LAN port, the test machine becomes immediately available as development
+  target without any manual installation or configuration steps needed. The
+  devnet component would interface with the rest of the Sculpt system as a
+  client of a file-system session (containing the boot payloads) and a
+  terminal session (for the virtual serial connection).
+
+:*ADDED* Statistical profiler using Sculpt's GDB monitor:
+
+  Starting with version 24.04, Sculpt OS provides the ability to supervise
+  selected components
+  [https://genodians.org/chelmuth/2024-05-17-on-target-debugging - using the GDB protocol].
+  The underlying mechanism and infrastructure could be leveraged for
+  implementing a statistical profiler that monitors components live.
+  Using the on-target information obtained via Sculpt's "download debug info"
+  option, the tool could display a sorted list of the most executed
+  functions, facilitating interactive on-target analysis and experimentation.
+
+
+In addition to the topics discussed above, the
+[https://genode.org/about/challenges - challenges page]
+features quite a few topics that remained unchanged. To get a complete
+picture, it is best to skim over the complete page.
+
