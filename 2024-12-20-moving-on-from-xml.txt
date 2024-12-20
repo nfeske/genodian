@@ -1,0 +1,758 @@
+
+
+        Moving on from XML? A teaser for a possible alternative
+
+
+The prominent role of XML throughout Genode has been a recurrent point of
+critique. Technical pros and cons notwithstanding, syntax is a matter of
+taste, and XML tastes not favorably to many. Over the past two years, I've
+secretly pondered over a tasteful alternative, which I'd like to share with
+you today.
+
+
+Original requirements
+---------------------
+
+When [https://genodians.org/chelmuth - Christian] and me
+[https://genode-labs.com/publications/bastei-design-2006.pdf - started]
+developing our new operating system in 2006, we were facing a huge mountain of
+uncertainties, ranging from kernel mechanisms, resource management,
+inter-component protocol design, over tool-chain and build-system questions,
+down to nitty-gritty programming details. Regarding system integration and
+configuration, we eschewed the baroque castles we knew from _/etc/_ on Linux,
+and instead longed for consistently using one single format. It should be able
+to express arbitrary structured information. It had to be simple to implement.
+It shouldn't raise too many eyebrows. Assuming that nobody was ever fired for
+using XML, we closed the case and lived happily ever since. Almost.
+
+
+XML experiences
+---------------
+
+*Code complexity:*
+Our initial parser for the subset of XML we needed had the form of a single
+header file of only 300 lines of code. Living and breathing the principle of
+minimal complexity! Over the past 15 years, with the added support for
+attributes and quoting, the parser doubled in size. But it is tiny still.
+Bare-bones C++ with no dynamic memory allocation, without using
+the C++ standard library, and not even depending on a C runtime.
+
+*Practical use:*
+In Genode, we use XML largely without ceremony. No namespaces, no XML declaration,
+no includes. Super powers like xslt play no role at all. XML is mostly
+edited by hand without special tools, just by using a regular text editor.
+XML is rarely written from scratch but mostly copied and adjusted. XML schema
+validation is an omnipresent part of our tooling to catch silly slip-ups early
+on. That said, XML is not solely written by humans. At Genode's runtime, XML
+is used as exchange format for propagating state from one component to another.
+During development and debugging, such XML-formatted states are routinely
+printed to the log and parsed by the human creature observing the log.
+
+*Inconveniences:*
+For the past 18 years, XML served our purpose very well. Yet, even among
+best friends, not everything is always rosy.
+* The rather *noisy* syntax hides information behind many symbols ('<', '>', '=', '"').
+  Even after years of daily exposure, looking through the syntax has not
+  become a second nature.
+* Even though XML is whitespace-agnostic, in practice, we find proper
+  *indentation inevitable* for human consumption. Hence, throughout Genode, one
+  finds that all XML, whether generated or written by hand, is accurately indented.
+* When citing configuration snippets in textual documentation, like the
+  Genode books or blog postings, the syntax stands out as tainting even simple
+  concepts as rather technical and complicated. It not attractive for teaching
+  material.
+* Quoting rules can get in the way, in particular when embedding XML as
+  good-case test patterns in automated tests. Talking about XML using XML
+  needs a healthy degree of goodwill.
+* Tools like xpath are powerful yet complicated. When not using the power,
+  what remains is that it's complicated.
+* When using the Genode-based [https://genode.org/download/sculpt - Sculpt OS],
+  one can change most aspects of the system live by editing XML.
+  For interactive use, the *commenting-out* of sub nodes requires many
+  text-editing steps that diminish the interactive experience.
+  The nesting of comments is unfortunately not possible either.
+
+*Invaluables:*
+To followings aspects of XML are most appreciated.
+* The completeness of XML-formatted data is protected by the end tag.
+  Unexpected truncation of data is always detected.
+* Speaking of tags, end tags provide a good sense of scope and orientation.
+  Unlike Python's syntax or YAML, there are not tree branches dangling
+  in the air.
+* XML schema definitions and xmllint catch errors early.
+* Nested nodes and their attributes are all we ever needed. Comments are a
+  given. We never encountered any limitation where XML blocked our way.
+* With less than 1000 lines of code, the C++ implementation of a parser
+  and a generator are relatively simple.
+
+*Verdict:*
+Seasoned users certainly appreciate XML for what it is from a purely
+utilitarian perspective. But it does not evoke any form of fondness. Compared
+to Unix that is rightfully admired for the powerful and beautifully
+concise concept of pipes, a system that confronts the user with XML at every
+step may be tolerated, maybe even appreciated but unlikely loved. In fact, we are
+regularly confronted with the distaste for XML when introducing Sculpt OS to
+new users. Even [https://en.wikipedia.org/wiki/Genode - Wikipedia] lists XML
+as the bitter pill to swallow when considering Genode.
+
+When we started out, we went for XML to make no mistake. A mistake we didn't make.
+Back then, we did not yet know the usage patterns and requirements that would
+emerge over the years. But now, with the power of hindsight attained, the
+perspective is no longer the same. We know exactly what we need.
+
+
+Needs and goals
+---------------
+
+* The less syntax, the better.
+* The expressed information should be identical to XML:
+  A hierarchy of nodes where each node has a type and can have any number of
+  attributes. Each attribute has a distinct tag name.
+  Conversion from and to (our used subset of) XML retains all information.
+* Human-friendliness: Regardless of whether information is hierarchical
+  or tabular, it should look and read natural.
+* Domain-specific-language-friendliness: Quoting rules should not stand
+  in the way to extending the text format by embedding different languages.
+* Simple to parse and generate.
+* Support for "literate configuration" where documentation and data can
+  appear side by side.
+* The benefits of XML should be preserved. Detection of truncated content,
+  strong sense of scope, offline validation.
+* A syntax that can be used as a simple query language when used on a
+  single line.
+* Pleasant interactive modification like disabling/enabling whole
+  sub structures.
+
+
+Introducing Human Readable Data (HRD)
+-------------------------------------
+
+For a quick first glance, let's have a peek at the Sculpt OS mixer
+configuration as XML on the left and the proposed new syntax on the right.
+
+[image xml_hrd]
+
+Still with me? Thanks for reading on.
+In the following, I will refer to the new syntax as "Human-Readable Data" (HRD).
+To go into more detail, let's take the configuration of the virtual network
+router of Sculpt OS as starting point:
+
+! <config verbose_domain_state="yes">
+!   <report interval_sec="5" bytes="yes" config="yes" config_triggers="yes"/>
+!   <default-policy domain="default"/>
+!   <policy label_prefix="vbox" domain="vm"/>
+!   <policy label_prefix="wifi -> " domain="uplink"/>
+!   <domain name="uplink">
+!     <nat domain="vm" tcp-ports="1000" udp-ports="1000" icmp-ids="1000"/>
+!     <udp-forward port="69"   domain="vm" to="10.0.1.2"/>
+!     <tcp-forward port="2209" domain="vm" to="10.0.1.2"/>
+!   </domain>
+!   <domain name="vm" interface="10.0.1.1/24">
+!     <dhcp-server ip_first="10.0.1.2" ip_last="10.0.1.200" dns_config_from="uplink"/>
+!     <tcp dst="0.0.0.0/0">
+!       <permit-any domain="uplink"/>
+!     </tcp>
+!     <udp dst="0.0.0.0/0">
+!       <permit-any domain="uplink"/>
+!     </udp>
+!     <icmp dst="0.0.0.0/0" domain="uplink"/>
+!   </domain>
+! </config>
+
+In HRD syntax, the same information is conveyed as follows:
+
+! config  verbose_domain_state: yes
+! + report interval_sec:    5
+!          bytes:           yes
+!          config:          yes
+!          config_triggers: yes
+! + default-policy                  domain: default
+! + policy  label_prefix: vbox    | domain: vm
+! + policy  label_prefix: wifi -> | domain: uplink
+! + domain uplink
+!   + nat  domain:     vm
+!   |      tcp-ports:  1000
+!   |      udp-ports:  1000
+!   |      icmp-ids:   1000
+!   + udp-forward  port: 69   | domain: vm | to: 10.0.1.2
+!   + tcp-forward  port: 2209 | domain: vm | to: 10.0.1.2
+! + domain vm  interface: 10.0.1.1/24
+!   + dhcp-server  ip_first:        10.0.1.2
+!   |              ip_last:         10.0.1.200
+!   |              dns_config_from: uplink
+!   + tcp   dst: 0.0.0.0/0 | + permit-any  | domain: uplink
+!   + udp   dst: 0.0.0.0/0 | + permit-any  | domain: uplink
+!   + icmp  dst: 0.0.0.0/0 |               | domain: uplink
+! -
+
+Let's dissect a little what we are seeing here.
+* HRD data starts with the type name of the top-level node
+* End of data marked by '-' at a separate line
+* The start of a line defines the role of the line.
+* The structure is defined by indentation. Each node-indentation level
+  is two spaces.
+A '+' at the start of a line defines a new sub node.
+The '+' is followed by the node type and an optional name
+attribute, separated by space:
+
+! config
+! + domain uplink
+! -
+
+Nodes can be nested. A sub node is indented by two spaces.
+
+! config
+! + domain uplink
+!   + nat
+! -
+
+Nodes can have attributes, separated by pipe characters.
+Multiple attributes can appear at the same line or at subsequent lines.
+Each attribute has the form 'tag: value', like on a form:
+
+! config
+! + domain uplink
+!   + nat  domain: vm
+!          tcp-ports: 1000 | udp-ports: 1000 | icmp-ids: 1000
+! -
+
+Two spaces of indentation can optionally be replaced by
+a pipe character followed by a space to convey a sense of scope,
+if desired:
+
+! config
+! + domain uplink
+!   + nat  domain:    vm
+!   |      tcp-ports: 1000
+!   |      udp-ports: 1000
+!   |      icmp-ids:  1000
+!   + udp-forward  port: 69   | domain: vm | to: 10.0.1.2
+!   + tcp-forward  port: 2209 | domain: vm | to: 10.0.1.2
+! -
+
+Lines starting with a dot are comments. By indenting those lines,
+the dots visually continue the sense of scope. This way, inline
+documentation nicely follows the flow.
+
+! config
+! + domain uplink
+!   + nat  domain:    vm
+!   .
+!   .      The following values limit the amount
+!   .      of memory used for keeping connection
+!   .      states.
+!   .
+!   |      tcp-ports: 1000
+!   |      udp-ports: 1000
+!   |      icmp-ids:  1000
+!   + udp-forward  port: 69   | domain: vm | to: 10.0.1.2
+!   + tcp-forward  port: 2209 | domain: vm | to: 10.0.1.2
+! -
+
+For embedding raw content, arbitrary printable characters can follow a ':'
+line prefix until the end of the line. No quoting is needed. This enables the
+embedding of arbitrary domain-specific languages. In the ROM-filter example
+below, the inline node contains raw XML syntax stated plain and clearly:
+
+! config
+! + input  name: leitzentrale_enabled
+!   |      rom:  leitzentrale
+!   |      node: leitzentrale
+!   + attribute name: enabled
+! + output node: config
+!   + inline
+!   | : <parent-provides>
+!   | :   <service name="Gui"/>
+!   | :   <service name="Timer"/>
+!   | :   <service name="File_system"/>
+!   | : </parent-provides>
+!   | :
+!   | : <default-route> <any-service> <parent/> </any-service> </default-route>
+!   | :
+!   | : <default caps="100"/>
+!   + if
+!     + has_value  input: leitzentrale_enabled
+!     |            value: yes
+!     + then
+!     | + inline
+!     |   : <start name="fader">
+!     |   :   <config initial_fade_in_steps="100" fade_in_steps="20" alpha="210"/>
+!     |   : </start>
+!     + else
+!       + inline
+!         : <start name="fader">
+!         :   <config fade_out_steps="30" alpha="0"/>
+!         : </start>
+! -
+
+A pipe character appends the information that follows to the current node.
+This is useful for presenting routing rules in a tabular way. You can think
+of a '|' as the start of a new line but with the current indentation retained.
+So a '+' can follow a '|' to attach a sub node to the current node.
+Or a ':' can follow a '|' to supply the remainder of the line as raw data.
+In the following example, the child nodes are sub nodes of their corresponding
+service nodes.
+
+! start
+! + route
+!   + service File_system                 | + child vfs
+!   + service ROM | label_suffix: .lib.so | + parent
+!   + service ROM | label_last: /bin/bash | + child vfs_rom
+!   + service ROM | label_prefix: /bin    | + child vfs_rom
+!   + any-service
+!     + parent
+!     + any-child
+! -
+
+The ability to put a deep tail of nested nodes on a single line
+happens to also clear the way for using HRD as a simple querying
+language (think of xpath). E.g., using a command line tool 'hrd',
+the following command would print the names of all start nodes
+found in Sculpt's current deploy configuration.
+
+! $ hrd get 'config | + start | : name' /config/deploy
+
+A sub tree can be commented out at once by replacing its '+' character
+by an 'x', crossing it out. For example, in the following backdrop
+configuration, the sticks_blue.png image has swiftly been disabled by
+changing a single character.
+
+! config
+! + libc
+! + vfs
+! | + rom genode_logo.png
+! | + rom grid.png
+! | + rom sticks_blue.png
+! + fill    color: #223344
+! x image   png:    sticks_blue.png
+! |         scale:  zoom
+! |         anchor: bottom_left
+! |         alpha:  200
+! + image   png:    genode_logo.png
+!           anchor: bottom_right
+!           alpha:  150
+! -
+
+That's basically it.
+Simple. Not because its trivial. But because of two years of digesting
+inspiration, iteration, and experimentation for making it so.
+All the while, Christian had been a delightful brain-storming sparring partner.
+Now, unable to make it any simpler, I'm settled on it. No, being honest,
+I pretty much love it.
+
+
+Technicalities
+--------------
+
+With the proposed line-based approach, a parser can scan each line
+independently, inferring the meaning of each line by its indentation level and
+prefix character.
+The notation relies on no other keywords than the symbols
+'|', '+', 'x', ':', '.', and '-'. Since all of these symbols except '|' play
+merely a special role when occurring as a line prefix, they require no
+quoting rules when they appear as attribute values.
+
+A sketch of a grammar may looks like this:
+
+! syntax
+! + end      | :  regexp -$
+! + type     | :  regexp [a-z][a-z0-9_-]*
+! + tag      | :  regexp [a-z][a-z0-9_-]*:
+! + space    | :  regexp [ ]+
+! + align    | :  regexp [ ]*
+! + delim    | :  regexp [|]
+! + value    | :  regexp [ ]+[^|]*
+! + anchor   | :  regexp [+][ ]|x[ ]
+! + remain   | :  regexp .*$
+! + indent   | :  regexp ([|][ ]|[ ][ ])*
+! + comment  | :  regexp [.][ ].*$
+! + raw      | :  regexp [:][ ].*$
+! + line     | :  <end> | <indent> <property> | <indent> <node>
+! + name     | :  [<value>]
+! + node     | :  <type> <space> <name> <details> | <type> <space> <attr> <details>
+! + subnode  | :  <anchor> <node>
+! + details  | :  [<space> <delim> <property>]
+! + property | :  <attr> <details> | <subnode> | <comment> | <raw>
+! + attr     | :  <tag> <value> 
+! -
+
+While experimenting with the conversion of real-world XML data taken from a
+running Sculpt OS back and forth between XML and HRD, I noticed that the
+HRD representation is usually about 10% to 20% smaller than the XML version.
+This is arguably not important for our use cases but not bad anyway.
+
+
+What's next?
+------------
+
+Switching out Genode's omni-present XML syntax by another is of course not
+a light-hearted decision. XML served us well after all.
+It's a change we may contemplate once, now with the comfort of a much more
+informed position than when we started out. But this can only be a
+once-in-a-lifetime change. A new take will be there to stay.
+Is it a good idea to even contemplate changing a time-tested concept?
+Isn't that to much friction and risk?
+
+Let's face it, XML is a compromise. We would either need to
+live with the compromise forever, keeping Genode back from
+unfolding its true beauty, or we would need to tackle the sweeping
+change sometime in the future. But then, with a potentially grown
+adoption of Genode, the costs would be even higher than today.
+So once convinced of the profound superiority of a new discovered solution,
+waiting it out would be a waste.
+
+To come to terms, I'd like to pursue the following questions
+in the near future:
+
+* How does a Sculpt OS variant using HRD compare to the current state?
+  Would HRD be a perceptible win to end users and developers?
+* How does a HRD parser and generator stack up against XML in terms
+  in implementation complexity?
+* Will our community share my sense of beauty and clarity of the new syntax?
+* What would be a sensible migration path and a comfortable timeline for
+  everyone involved?
+
+
+
+Further notes and examples
+##########################
+
+The short introduction above is of course not an exhaustive description.
+Below, I've collected additional thoughts and examples in a somewhat random
+order.
+
+
+
+
+Sculpt's config/event_filter
+----------------------------
+
+! config
+! + output
+!   + chargen
+!     + remap
+!     | + key  KEY_CAPSLOCK | to: KEY_ESC
+!     | + key  KEY_F12      | to: KEY_DASHBOARD
+!     | + key  KEY_LEFTMETA | to: KEY_SCREEN
+!     | + include  rom: numlock.remap
+!     | + merge
+!     |   + accelerate  max:                 50
+!     |   | |           sensitivity_percent: 1200
+!     |   | |           curve:               100
+!     |   | + button-scroll
+!     |   |   + input ps2
+!     |   |   + vertical    button: BTN_MIDDLE | speed_percent: -10
+!     |   |   + horizontal  button: BTN_MIDDLE | speed_percent: -10
+!     |   + touch-click
+!     |   | + input touch
+!     |   + input usb
+!     |   + input touch
+!     |   + input sdl
+!     + mod1
+!     | + key KEY_LEFTSHIFT
+!     | + key KEY_RIGHTSHIFT
+!     + mod2
+!     | + key KEY_LEFTCTRL
+!     | + key KEY_RIGHTCTRL
+!     + mod3
+!     | + key KEY_RIGHTALT
+!     + mod4
+!     | + rom capslock
+!     + repeat  delay_ms: 230
+!     |         rate_ms:  40
+!     + include  rom: keyboard/en_us
+!     + include  rom: keyboard/special
+! + policy  label: ps2   | input: ps2
+! + policy  label: usb   | input: usb
+! + policy  label: touch | input: touch
+! + policy  label: sdl   | input: sdl
+! -
+
+
+The report-ROM configuration of the static part of Sculpt OS
+------------------------------------------------------------
+
+! config  | verbose: no
+! + policy  label: leitzentrale_config -> leitzentrale        | report: global_keys_handler -> leitzentrale
+! + policy  label: leitzentrale -> manager -> leitzentrale    | report: global_keys_handler -> leitzentrale
+! + policy  label: pointer -> hover                           | report: nitpicker -> hover
+! + policy  label: pointer -> xray                            | report: global_keys_handler -> leitzentrale
+! + policy  label: pointer -> shape                           | report: shape
+! + policy  label: clipboard -> focus                         | report: nitpicker -> focus
+! + policy  label: runtime -> capslock                        | report: global_keys_handler -> capslock
+! + policy  label: runtime -> numlock                         | report: global_keys_handler -> numlock
+! + policy  label: numlock_remap_rom -> numlock               | report: global_keys_handler -> numlock
+! + policy  label: event_filter -> capslock                   | report: global_keys_handler -> capslock
+! + policy  label: runtime -> clicked                         | report: nitpicker -> clicked
+! + policy  label: leitzentrale -> manager -> nitpicker_focus | report: nitpicker -> focus
+! + policy  label: leitzentrale -> manager -> nitpicker_hover | report: nitpicker -> hover
+! + policy  label: nit_focus -> leitzentrale                  | report: global_keys_handler -> leitzentrale
+! + policy  label: nit_focus -> slides                        | report: global_keys_handler -> slides
+! + policy  label: nit_focus -> hover                         | report: nitpicker -> hover
+! + policy  label: slides_gui_fb_config -> slides             | report: global_keys_handler -> slides
+! -
+
+
+The connectors report given by the display driver
+-------------------------------------------------
+
+! connectors  | max_width:  3840
+! |           | max_height: 2160
+! + merge DP-5
+!   + connector eDP-1  | connected:  true
+!   | |                | width_mm:   280
+!   | |                | height_mm:  190
+!   | |                | brightness: 68
+!   | + mode 2256x1504  | width:     2256
+!   | |                 | height:    1504
+!   | |                 | hz:        60
+!   | |                 | id:        1
+!   | |                 | width_mm:  285
+!   | |                 | height_mm: 190
+!   | |                 | preferred: true
+!   | |                 | used:      true
+!   | + mode 2256x1504  | width:     2256
+!   |                   | height:    1504
+!   |                   | hz:        48
+!   |                   | id:        2
+!   |                   | width_mm:  285
+!   |                   | height_mm: 190
+!   + connector DP-1  | connected: false
+!   + connector DP-2  | connected: false
+!   + connector DP-3  | connected: false
+!   + connector DP-4  | connected: false
+!   + connector DP-5  | connected: true
+!   | |               | width_mm:  520
+!   | |               | height_mm: 320
+!   | + mode 1920x1200  | width:     1920
+!   | |                 | height:    1200
+!   | |                 | hz:        60
+!   | |                 | id:        1
+!   | |                 | width_mm:  518
+!   | |                 | height_mm: 324
+!   | |                 | preferred: true
+!   | |                 | used:      true
+!   | + mode 1920x1080  | width:  1920
+!   | |                 | height: 1080
+!   | |                 | hz:     60
+!   | |                 | id:     2
+!   | + mode 1600x1200  | width:  1600
+!   | |                 | height: 1200
+!   | |                 | hz:     60
+!   | |                 | id:     3
+!   | + mode 1680x1050  | width:  1680
+!   | |                 | height: 1050
+!   | |                 | hz:     60
+!   | |                 | id:     4
+!   | + mode 1280x1024  | width:  1280
+!   | |                 | height: 1024
+!   | |                 | hz:     60
+!   | |                 | id:     5
+!   | + mode 1280x960  | width:  1280
+!   | |                | height: 960
+!   | |                | hz:     60
+!   | |                | id:     6
+!   | + mode 1024x768  | width:  1024
+!   | |                | height: 768
+!   | |                | hz:     60
+!   | |                | id:     7
+!   | + mode 800x600  | width:  800
+!   | |               | height: 600
+!   | |               | hz:     60
+!   | |               | id:     8
+!   | + mode 640x480  | width:  640
+!   | |               | height: 480
+!   | |               | hz:     60
+!   | |               | id:     9
+!   | + mode 720x400  | width:  720
+!   |                 | height: 400
+!   |                 | hz:     70
+!   |                 | id:     10
+!   + connector DP-6  | connected: false
+!   + connector DP-7  | connected: false
+! -
+
+
+Example of PCI devices reported by the platform driver
+------------------------------------------------------
+
+! devices
+! + device 00:02.0
+!   |      type: pci
+!   |      used: true
+!   + io_mem  pci_bar:   0
+!   |         phys_addr: 0xf2000000
+!   |         size:      0x400000
+!   + io_mem  pci_bar:   2
+!   |         phys_addr: 0xd0000000
+!   |         size:      0x10000000
+!   + irq  number: 1
+!   + io_port_range  pci_bar:   4
+!   |                phys_addr: 0x1800
+!   |                size:      0x8
+!   + pci-config  vendor_id:          0x8086
+!                 device_id:          0x46
+!                 class:              0x30000
+!                 revision:           0x2
+!                 sub_vendor_id:      0x17aa
+!                 sub_device_id:      0x215a
+!                 intel_gmch_control: 0x0
+! + device 00:16.0
+!   |      type: pci
+!   |      used: false
+!   + io_mem  pci_bar:   0
+!   |         phys_addr: 0xf2727800
+!   |         size:      0x80
+!   + irq  number: 2
+!   + pci-config  vendor_id:     0x8086
+!                 device_id:     0x3b64
+!                 class:         0x78000
+!                 revision:      0x6
+!                 sub_vendor_id: 0x17aa
+!                 sub_device_id: 0x215f
+! -
+
+
+VFS configuration used by Sculpt's system shell subsystem
+---------------------------------------------------------
+
+! config
+! + vfs
+!   + tar bash-minimal.tar
+!   + tar coreutils-minimal.tar
+!   + tar vim-minimal.tar
+!   + dir dev
+!   | + zero
+!   | + null
+!   | + terminal
+!   | + inline rtc
+!   |   : 2018-01-01 00:01
+!   + dir pipe   | + pipe
+!   + dir rw     | + fs  label: target
+!   + dir report | + fs  label: report
+!   + dir config | + fs  label: config
+!   + dir tmp    | + ram
+!   + dir share  | + dir vim | + rom vimrc | binary: no
+! + policy  label_prefix: vfs_rom  | root: /
+! + default-policy  writeable: yes | root: /
+! -
+
+
+The start node for bash in the system shell
+-------------------------------------------
+
+Note the quoted value of the 'PS1' environment variable, which is
+used to capture the trailing space.
+
+! start /bin/bash | caps: 450
+! + resource RAM | quantum: 28M
+! + exit  propagate: yes
+! + config
+!   + libc  stdin:  /dev/terminal
+!   |       stdout: /dev/terminal
+!   |       stderr: /dev/terminal
+!   |       rtc:    /dev/rtc
+!   |       pipe:   /pipe
+!   + vfs
+!   | + fs
+!   + arg  value: bash
+!   + env  key: TERM | value: screen
+!   + env  key: PATH | value: /bin
+!   + env  key: PS1  | value: "system:$PWD> "
+! + route
+!   + service File_system                 | + child vfs
+!   + service ROM | label_suffix: .lib.so | + parent
+!   + service ROM | label_last: /bin/bash | + child vfs_rom
+!   + service ROM | label_prefix: /bin    | + child vfs_rom
+!   + any-service
+!     + parent
+!     + any-child
+! -
+
+
+Interactive use of a 'hrd' command-line tool
+--------------------------------------------
+
+Control the presence of the 'falkon' web browser. The '-w' argument
+instructs the tool to write back the change instead of printing the
+new version to stdout:
+
+! $ hrd -w enable  'config | + start falkon' /config/deploy
+! $ hrd -w disable 'config | + start falkon' /config/deploy
+! $ hrd -w toggle  'config | + start falkon' /config/deploy
+
+Restart the 'falkon' web browser:
+! $ hrd -w increment 'config | + start falkon | : version' /config/deploy
+
+Add a new subsystem (invocations like this could be found in shell scripts):
+
+! $ hrd -w insert 'config' \
+!                 ': start fonts_fs | priority: -2' \
+!                 ':                | pkg: ...' \
+!                 ': + route' \
+!                 ':   + service ROM' \
+!                 ':     + parent label: config -> managed/fonts' \
+!                 /config/deploy
+
+
+Add a start node based on a launcher file:
+
+! $ hrd insert-file 'config | : launcher/vm_fs.hrd | as-node: start | name: vm_fs'
+
+Check the compliance of a HRD against a schema:
+
+! $ hrd check --schema-path /config/schema <hrd-file>
+
+
+Sketch of a schema definition
+-----------------------------
+
+! schema
+! + simple_type boolean
+!   + restriction  base: string
+!     + enum value: true
+!     + enum value: yes
+!     + enum value: on
+!     + enum value: false
+!     + enum value: no
+!     + enum value: off
+! + simple_type session_label
+!   + restriction  base:  string
+!     + min_length value: 0
+!     + max_length value: 160
+! + complex_type session_policy
+!   + attribute label_prefix | type: session_label
+!   + attribute label_suffix | type: session_label
+!   + attribute label        | type: session_label
+! .
+! .
+! -
+
+
+Considerations
+--------------
+
+Throughout Genode, 'name' attributes are pervasively used as unique IDs
+within the scope of one node.
+Think of connector name, directory name, button name, domain name,
+start name. Node definitions would normally look like:
+
+! + connector name: HDMI-1
+!   + mode name: 1920x1080 | width: 1920 | height: 1080 | hz: 60
+
+Since the use of 'name' attributes is such a common pattern, HRD handles
+it as special case where the name can appear directly after the
+node type.
+
+! + connector HDMI-1
+!   + mode 1920x1080 | width: 1920 | height: 1080 | hz: 60
+
+As the attributes following the name belong to the named node, the
+formatting at mulitple lines can benefit from the use of leading '|'
+characters separating the name from the attributes.
+
+! + connector HDMI-1
+!   + mode 1920x1080 | width:  1920
+!                    | height: 1080
+!                    | hz:     60
+
