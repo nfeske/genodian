@@ -1,0 +1,30 @@
+
+
+                   A casual Sculpt OS walkthrough
+
+
+As we recently got repeatedly asked for a screencast introducing the practical
+use of Sculpt OS, I have now recorded a guided tour through the
+installation, use, and customization of Sculpt OS version 24.10.
+
+Even though [https://genode.org/download/sculpt - Sculpt OS] has been in
+routine daily use for years now, many outside observers still tend to perceive
+it as fairly obscure because it does not follow the usual preconceptions of a
+consumer-oriented operating system. Extensive
+[https://genode.org/documentation/articles/sculpt-24-10 - documentation]
+exists, but it leaves a fairly technical impression at a cursory glance,
+which may scare some people away.
+
+The screencast below aims at making the system a little bit more approachable.
+It walks you through the steps of downloading, installing, booting the system
+image, navigating the administrative user interface, and interactively
+extending and customizing the system. The tour is wrapped up with the
+steps for creating your personal sculpted OS on a bootable USB stick.
+
+: <video controls width="720">
+:   <source src="https://genode.org/files/sculpt_24_10_walkthrough.mp4" type="video/mp4" />
+:   <a href="https://genode.org/files/sculpt_24_10_walkthrough.mp4">Download as mp4</a>
+: </video>
+
+Enjoy! For any feedback or questions, please drop by at the Genode's
+[https://genode.discourse.group - community forum].
