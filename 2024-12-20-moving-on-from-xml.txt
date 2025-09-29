@@ -673,20 +673,20 @@ used to capture the trailing space.
 Interactive use of a 'hrd' command-line tool
 --------------------------------------------
 
-Control the presence of the 'falkon' web browser. The '-w' argument
-instructs the tool to write back the change instead of printing the
+Control the presence of the 'falkon' web browser. The '-i' argument
+instructs the tool to write back the change _in place_ instead of printing the
 new version to stdout:
 
-! $ hrd -w enable  'config | + start falkon' /config/deploy
-! $ hrd -w disable 'config | + start falkon' /config/deploy
-! $ hrd -w toggle  'config | + start falkon' /config/deploy
+! $ hrd -i enable  'config | + start falkon' /config/deploy
+! $ hrd -i disable 'config | + start falkon' /config/deploy
+! $ hrd -i toggle  'config | + start falkon' /config/deploy
 
 Restart the 'falkon' web browser:
-! $ hrd -w increment 'config | + start falkon | : version' /config/deploy
+! $ hrd -i increment 'config | + start falkon | : version' /config/deploy
 
 Add a new subsystem (invocations like this could be found in shell scripts):
 
-! $ hrd -w insert 'config' \
+! $ hrd -i insert 'config' \
 !                 ': start fonts_fs | priority: -2' \
 !                 ':                | pkg: ...' \
 !                 ': + route' \
