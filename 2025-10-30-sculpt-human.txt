@@ -1,0 +1,232 @@
+
+
+             Sculpting with less noise and more clarity
+
+
+With Sculpt 25.10, we kick off the practical evaluation phase of a new
+human-oriented configuration format specifically designed for the usage
+patterns of Genode and Sculpt OS in particular. With a ready-to-use
+system image, I'm inviting you to try it at home.
+
+_As a note of caution, please consider my variant of the Sculpt system image_
+_as experimental. Rough edges are expected. Please consider the_
+_[https://genode.discourse.group/ - forum] for troubleshooting and for sharing_
+_your impressions._
+
+Sculpt OS users can find the experimental variant in the system-update
+dialog when selecting 'nfeske' as software provider. Download and install
+version 2025-10-30, and reboot your machine.
+
+[image sculpt_25_10_nfeske]
+
+You can switch back to the official release by
+(re-)installing the image provided by 'genodelabs'. Both versions are largely
+interoperable. Packages installed from 'genodelabs' should generally work
+with the nfeske image and vice versa, except for a few components still
+hardwired to XML.
+
+New users can find a ready-to-use system image linked at the official
+download page under "Evaluating the use of the human-readable data format".
+Please warm up with
+[https://genode.org/documentation/articles/sculpt-25-10#Getting_a_first_impression - Getting a first impression].
+
+:Sculpt OS download:
+
+  [https://genode.org/download/sculpt]
+
+
+Sightseeing
+-----------
+
+Let's first stroll around for a bit and look at the configurations and status
+reports offered by Sculpt OS by default. For this, select "use" in the RAM-fs
+component, connect to Wifi, select the "window manager" preset in the
+System menu, and press F12 to enter the desktop. The system-shell window
+will be our place to be for this session. Use 'vim' for having a look at the
+following files:
+
+:Access points reported by the Wifi driver:
+
+  _/report/runtime/wifi/accesspoints_
+
+  Use vim's ':e' command to update the view.
+  Discard the buffer via the ':bd!' command.
+
+:Connected USB devices:
+
+  _/report/runtime/usb/devices_
+
+  Plug in a new USB device and issue ':e' to see the device appear.
+
+  To get a tree-like view while using the same syntax, let's reformat
+  the vim buffer using the provided 'hrd' tool, using the following vim
+  commands:
+  ! :set shell=bash
+  ! :%! hrd format -
+
+:Connected displays and their supported modes:
+
+  _/report/runtime/intel_fb/connectors_
+
+:A complete overview of the runtime:
+
+  _/config/managed/runtime_
+
+  This file reveals how all components are wired up to one another.
+  The tabular routing tables show the wires.
+
+:Construction plan of the system-shell component under your fingers:
+
+  _/rw/depot/nfeske/raw/system_shell/2025-10-29/system_shell.config_
+
+  It describes the composition of the Unix-like subsystem that you
+  are currently using, consisting of a terminal, virtual file system, and
+  the bash shell. Note how the leading pipe symbols reinforce a
+  tangible sense of scope even if the structures get deeper, like
+  in the configuration of the vfs component.
+
+:Keyboard-layout definition:
+
+  _/config/keyboard/en_us_
+
+  The tabular form self-documents the relation between physical keys and their
+  corresponding code points. The trailing comment is able to feature the
+  corresponding character without the need for quoting because each comment is
+  delimited by the end of its line.
+
+  The comments prefixed by a dot at the start of a line unobtrusively annotate
+  the content while keeping the vertical flow of the structure in tact.
+
+Interactive manipulation
+------------------------
+
+Sculpt's _/config/_ can be live edited.
+
+:Deploy configuration:
+
+  Take a snapshot of the current deployment state:
+
+  ! system:/> cp /config/managed/deploy /config/
+
+  Then open _/config/deploy_ in vim.
+
+  Search the start node of the 'themed_decorator'.
+  Replace the pkg attribute value, changing "themed_decorator" to
+  "motif_decorator".
+
+  Saving the file prompts Sculpt to download the not-yet-installed
+  package for the motif decorator, and restart the subsystem named
+  "themed_decorator" while using the construction plan of the newly
+  installed motif decorator.
+
+  You will see the window decorations being replaced.
+
+  Undo the change and save the file again to regain the original
+  appearance.
+
+  Search for the start node for "wm_backdrop".
+  Replace the leading '+' of an image node by an 'x', crossing it out so
+  to speak. Save the file to see the effect.
+  Try the same for the entire start node and see the entire backdrop
+  component disappear.
+
+:Window layout:
+
+  _/rw/recall/window_layouter/recall/25.10_
+
+  This is the live state of the window layouter. Open the file in vim
+  and look out for the 'assign' node for the system shell.
+  Change the 'xpos' attribute to another value and save the file.
+
+Tool-aided manipulation
+-----------------------
+
+We already used the 'hrd' tool for reformatting the USB-devices report
+above. The tool can also be used to convert XML and HDR back and forth, to
+query attribute values, and to perform simple transformations. Refer to
+_/share/hrd/README_ for a brief documentation.
+
+:Disable/enable a component of the deployment:
+
+  ! system:/> hrd -i disable 'config | + start wm_backdrop' /config/deploy
+  ! system:/> hrd -i enable  'config | + start wm_backdrop' /config/deploy
+
+  The '-i' option writes back the change instead of printing to stdout.
+  Note the use of HRD syntax as simple query language.
+
+:List the names of the deployed components:
+
+  ! system:/> hrd get 'config | + start | : name' /config/managed/deploy
+
+:Reset your machine:
+
+  ! system:/> hrd set -i 'system | : state: reset' /config/system
+
+What I have learned so far
+--------------------------
+
+First, the technical migration path from XML to the new syntax was smoother
+than I expected. This can largely be attributed to the fact that the structure
+of the format - the notion of nodes and attributes - has been inherited from
+XML as is. It is merely surface-level change.
+
+The gradual swapping out of XML syntax by the new one has been a wholly
+satisfying experience. The heavy-lifting is accomplished by the 'hrd' tool
+whereas the subsequent manual refinement gives new freedoms to express
+intent pretty well. I found it surprising how much gain in clarity can
+be attained by tabular formatting in the absence of delimiting characters
+and other syntactic noise.
+
+Third, the major point of friction while adopting the new format was the rare
+former reliance on significant trailing spaces in XML attributes. As the
+new syntax has deliberately no notion of quoting characters, attribute values
+are always trimmed. The reliance of significant leading/trailing spacing in
+attribute values has been a bit hackish anyway. So those places called for an
+adjustment, e.g., by expressing such values as quoted content (via ':')
+instead. There are probably a few offenders left hiding in the dark.
+
+Finally, I'm not overly happy with the acronym HRD (human-readable data)
+because it does not roll well off the tongue, which is especially sad for
+something that's supposed to be human-friendly. Therefore, I'm considering
+naming it HID (human-inclined data) instead. Would be nice you get opinions
+about that.
+
+References
+----------
+
+:Moving on from XML? A teaser for a possible alternative:
+
+  My previous article provides the background, motivation, and rules of the
+  new syntax.
+
+  [https://genodians.org/nfeske/2024-12-20-moving-on-from-xml]
+
+:Contrasting the syntax with XML:
+
+  [https://github.com/nfeske/genode/commits/sculpt_25_10/]
+
+  This (unstable) topic branch already contains numerous before-after
+  examples in the form of commits for individual components.
+
+What's next?
+------------
+
+I hope that the guided tour above makes a convincing case for adopting
+this simple yet surprisingly flexible syntax throughout Sculpt OS. To
+follow this route, there are quite a few topics to address. From the back
+of my head:
+
+# Checking configurations against schema definitions by adding a 'check'
+  command to the HRD tool.
+
+# Changing all of Genode's components to become syntax-agnostic.
+  Most of them are adapted by now, but a few remain.
+
+# A semi-formal specification of the syntax along with a suite of good
+  and bad test cases.
+
+# The implementation of parsers in our favorite languages. Up to know,
+  only Tcl and C++ are covered.
+
+# Syntax highlighting in vim would be nice.
+
